@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tetris</title>
+  <link rel="stylesheet" href="styles/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div>
+        <p class="eyebrow">Modo Pro</p>
+        <h1>Tetris Arcade</h1>
+        <p class="subtitle">Três telas sincronizadas com estilo premium e controles sem scroll.</p>
+      </div>
+    </header>
+
+    <main class="main-grid">
+      <section class="board-panel">
+        <div class="board-shell">
+          <div class="board-grid">
+            <div class="board-card">
+              <span class="board-label">Tela 1</span>
+              <canvas id="tetris-board-1" width="300" height="600"></canvas>
+            </div>
+            <div class="board-card">
+              <span class="board-label">Tela 2</span>
+              <canvas id="tetris-board-2" width="300" height="600"></canvas>
+            </div>
+            <div class="board-card">
+              <span class="board-label">Tela 3</span>
+              <canvas id="tetris-board-3" width="300" height="600"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-panel boxed">
+          <div class="status-item">
+            <span class="status-title">Pontuação total</span>
+            <strong id="score">0</strong>
+          </div>
+          <div class="status-item">
+            <span class="status-title">Linhas totais</span>
+            <strong id="lines">0</strong>
+          </div>
+          <div class="status-item">
+            <span class="status-title">Nível atual</span>
+            <strong id="level">1</strong>
+          </div>
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <div class="card action-card">
+          <button id="start-button" type="button" class="primary-button">Iniciar Jogo</button>
+        </div>
+
+        <div class="card next-grid">
+          <h2>Próximo</h2>
+          <div class="next-list">
+            <div class="next-card small">
+              <span>Tela 1</span>
+              <canvas id="next-piece-1" width="120" height="120"></canvas>
+            </div>
+            <div class="next-card small">
+              <span>Tela 2</span>
+              <canvas id="next-piece-2" width="120" height="120"></canvas>
+            </div>
+            <div class="next-card small">
+              <span>Tela 3</span>
+              <canvas id="next-piece-3" width="120" height="120"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card controls-card">
+          <h2>Controles</h2>
+          <ul>
+            <li><strong>← / →</strong> - mover as 3 telas</li>
+            <li><strong>↑</strong> - rotacionar as 3 telas</li>
+            <li><strong>↓</strong> - queda rápida</li>
+            <li><strong>Espaço</strong> - queda instantânea</li>
+            <li><strong>P</strong> - pausar / retomar</li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
