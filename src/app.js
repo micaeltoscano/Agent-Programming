@@ -59,13 +59,13 @@ const botTwoScoreRow = document.getElementById("bot-two-score-row");
 const botTwoScoreElement = document.getElementById("bot-two-score");
 
 const COLORS = {
-  I: "#35ada8",
-  J: "#4e7dd9",
-  L: "#f29f45",
-  O: "#f4d35e",
-  S: "#61c46e",
-  T: "#a56de2",
-  Z: "#ea5667"
+  I: "#0ea5e9",
+  J: "#2563eb",
+  L: "#f97316",
+  O: "#eab308",
+  S: "#10b981",
+  T: "#8b5cf6",
+  Z: "#ef4444"
 };
 
 const SHAPES = {
@@ -290,17 +290,19 @@ function updateScreen() {
 }
 
 function updateModeLayout() {
-  const isMultiplayer = gameMode === "multiplayer";
-  const isBotMode = gameMode === "bot";
+  const activeMode = mode === "playing" || mode === "gameOver" || mode === "demo";
+  const isMultiplayer = gameMode === "multiplayer" && activeMode;
+  const isBotMode = gameMode === "bot" && activeMode;
+
   boardSetElement.classList.toggle("multiplayer", isMultiplayer);
   boardSetElement.classList.toggle("bot-mode", isBotMode);
   opponentPanelElement.hidden = !isMultiplayer && !isBotMode;
   botTwoPanelElement.hidden = !isBotMode;
-  remoteScoreRow.hidden = !isMultiplayer;
-  botOneScoreRow.hidden = !isBotMode;
-  botTwoScoreRow.hidden = !isBotMode;
-  localLabelElement.textContent = isMultiplayer ? playerLabel : (isBotMode ? "VOCE" : "Jogador Solo");
-  opponentLabelElement.textContent = isBotMode ? "VILLACORTA 67" : (playerLabel === "Jogador 1" ? "Jogador 2" : "Jogador 1");
+  remoteScoreRow.hidden = gameMode !== "multiplayer";
+  botOneScoreRow.hidden = gameMode !== "bot";
+  botTwoScoreRow.hidden = gameMode !== "bot";
+  localLabelElement.textContent = gameMode === "multiplayer" ? playerLabel : (gameMode === "bot" ? "VOCE" : "Jogador Solo");
+  opponentLabelElement.textContent = gameMode === "bot" ? "VILLACORTA 67" : (playerLabel === "Jogador 1" ? "Jogador 2" : "Jogador 1");
 }
 
 function loadRanking() {
@@ -589,7 +591,7 @@ function applyScore(cleared, wasTSpin) {
 
   score += points;
   if (points > 0) {
-    addFloatingText(`+${points}`, boardCanvas.width / 2, boardCanvas.height / 2 + 18, "#f7f4ea");
+    addFloatingText(`+${points}`, boardCanvas.width / 2, boardCanvas.height / 2 + 18, "#0f172a");
   }
   updateHighScore();
   updateStats();
@@ -806,8 +808,8 @@ function drawOpponent() {
   drawGrid(opponentContext, COLS, ROWS, BLOCK);
 
   if (!remoteState) {
-    opponentContext.fillStyle = "rgba(247, 244, 234, 0.72)";
-    opponentContext.font = "16px Arial, Helvetica, sans-serif";
+    opponentContext.fillStyle = "rgba(15, 23, 42, 0.6)";
+    opponentContext.font = "16px 'Inter', sans-serif";
     opponentContext.textAlign = "center";
     opponentContext.fillText("Aguardando jogador", opponentCanvas.width / 2, opponentCanvas.height / 2);
     return;
@@ -831,10 +833,10 @@ function drawOpponent() {
 }
 
 function drawRemoteGameOver() {
-  opponentContext.fillStyle = "rgba(9, 10, 13, 0.76)";
+  opponentContext.fillStyle = "rgba(255, 255, 255, 0.85)";
   opponentContext.fillRect(0, 0, opponentCanvas.width, opponentCanvas.height);
-  opponentContext.fillStyle = "#f7f4ea";
-  opponentContext.font = "700 30px Arial, Helvetica, sans-serif";
+  opponentContext.fillStyle = "#0f172a";
+  opponentContext.font = "700 30px 'Outfit', sans-serif";
   opponentContext.textAlign = "center";
   opponentContext.fillText("GAME OVER", opponentCanvas.width / 2, opponentCanvas.height / 2);
 }
@@ -1249,7 +1251,7 @@ function addBotExplosion(game, x, y) {
       vy: Math.sin(angle) * speed,
       life: 480,
       maxLife: 480,
-      color: ["#f4d35e", "#ea5667", "#67d7d1"][Math.floor(Math.random() * 3)],
+      color: ["#3b82f6", "#60a5fa", "#93c5fd", "#ffffff"][Math.floor(Math.random() * 4)],
       size: 3 + Math.random() * 5
     });
   }
@@ -1293,10 +1295,10 @@ function drawBotGame(game, context, canvas) {
   drawBotEffects(game, context);
 
   if (game.gameOver) {
-    context.fillStyle = "rgba(9, 10, 13, 0.76)";
+    context.fillStyle = "rgba(255, 255, 255, 0.85)";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "#f7f4ea";
-    context.font = "700 30px Arial, Helvetica, sans-serif";
+    context.fillStyle = "#0f172a";
+    context.font = "700 30px 'Outfit', sans-serif";
     context.textAlign = "center";
     context.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
   }
@@ -1307,7 +1309,7 @@ function drawBotGame(game, context, canvas) {
 function drawBotEffects(game, context) {
   game.lineEffects.forEach((effect) => {
     const alpha = effect.life / effect.maxLife;
-    context.fillStyle = `rgba(244, 211, 94, ${0.35 * alpha})`;
+    context.fillStyle = `rgba(59, 130, 246, ${0.35 * alpha})`;
     context.fillRect(0, effect.row * BLOCK, COLS * BLOCK, BLOCK);
   });
 
@@ -1370,8 +1372,11 @@ function drawPiece(piece, context, blockSize, alpha = 1, outlineOnly = false) {
 
       if (outlineOnly) {
         context.strokeStyle = piece.color;
-        context.lineWidth = 3;
-        context.strokeRect(drawX * blockSize + 4, drawY * blockSize + 4, blockSize - 8, blockSize - 8);
+        context.lineWidth = 2;
+        context.setLineDash([4, 4]);
+        drawRoundedRect(context, drawX * blockSize + 2, drawY * blockSize + 2, blockSize - 4, blockSize - 4, 6);
+        context.stroke();
+        context.setLineDash([]);
       } else {
         drawBlock(context, drawX, drawY, blockSize, piece.color);
       }
@@ -1381,16 +1386,35 @@ function drawPiece(piece, context, blockSize, alpha = 1, outlineOnly = false) {
   context.restore();
 }
 
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
 function drawBlock(context, x, y, size, color) {
   const px = x * size;
   const py = y * size;
+  const padding = 1.5;
+  const radius = 6;
 
+  context.save();
   context.fillStyle = color;
-  context.fillRect(px + 1, py + 1, size - 2, size - 2);
-  context.fillStyle = "rgba(255, 255, 255, 0.18)";
-  context.fillRect(px + 3, py + 3, size - 6, 5);
-  context.strokeStyle = "rgba(0, 0, 0, 0.28)";
-  context.strokeRect(px + 1.5, py + 1.5, size - 3, size - 3);
+  drawRoundedRect(context, px + padding, py + padding, size - padding * 2, size - padding * 2, radius);
+  context.fill();
+
+  context.strokeStyle = "rgba(255, 255, 255, 0.35)";
+  context.lineWidth = 1;
+  context.stroke();
+  context.restore();
 }
 
 function addLineEffect(row) {
@@ -1441,13 +1465,13 @@ function addExplosion(x, y) {
       vy: Math.sin(angle) * speed,
       life: 480,
       maxLife: 480,
-      color: ["#f4d35e", "#ea5667", "#67d7d1"][Math.floor(Math.random() * 3)],
+      color: ["#3b82f6", "#60a5fa", "#93c5fd", "#ffffff"][Math.floor(Math.random() * 4)],
       size: 3 + Math.random() * 5
     });
   }
 }
 
-function addFloatingText(text, x, y, color = "#f7f4ea") {
+function addFloatingText(text, x, y, color = "#0f172a") {
   floatingTexts.push({
     text,
     x,
@@ -1508,10 +1532,10 @@ function drawFloatingTexts(context, items) {
 }
 
 function drawPauseOverlay(context, canvas) {
-  context.fillStyle = "rgba(9, 10, 13, 0.72)";
+  context.fillStyle = "rgba(255, 255, 255, 0.85)";
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "#f7f4ea";
-  context.font = "700 34px Arial, Helvetica, sans-serif";
+  context.fillStyle = "#0f172a";
+  context.font = "700 30px 'Outfit', sans-serif";
   context.textAlign = "center";
   context.fillText("PAUSADO", canvas.width / 2, canvas.height / 2);
 }
@@ -1519,7 +1543,7 @@ function drawPauseOverlay(context, canvas) {
 function drawEffects() {
   lineEffects.forEach((effect) => {
     const alpha = effect.life / effect.maxLife;
-    boardContext.fillStyle = `rgba(244, 211, 94, ${0.35 * alpha})`;
+    boardContext.fillStyle = `rgba(59, 130, 246, ${0.35 * alpha})`;
     boardContext.fillRect(0, effect.row * BLOCK, COLS * BLOCK, BLOCK);
   });
 
@@ -1544,9 +1568,9 @@ function drawEffects() {
 }
 
 function drawGrid(context, cols, rows, blockSize) {
-  context.fillStyle = "#090a0d";
+  context.fillStyle = "#f8fafc";
   context.fillRect(0, 0, cols * blockSize, rows * blockSize);
-  context.strokeStyle = "rgba(255, 255, 255, 0.055)";
+  context.strokeStyle = "rgba(15, 23, 42, 0.04)";
   context.lineWidth = 1;
 
   for (let x = 0; x <= cols; x += 1) {
@@ -1722,14 +1746,15 @@ function finishMultiplayerByScore() {
 }
 
 function drawGameOver() {
-  boardContext.fillStyle = "rgba(9, 10, 13, 0.76)";
+  boardContext.fillStyle = "rgba(255, 255, 255, 0.85)";
   boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
-  boardContext.fillStyle = "#f7f4ea";
-  boardContext.font = "700 34px Arial, Helvetica, sans-serif";
+  boardContext.fillStyle = "#0f172a";
+  boardContext.font = "700 30px 'Outfit', sans-serif";
   boardContext.textAlign = "center";
   boardContext.fillText("GAME OVER", boardCanvas.width / 2, boardCanvas.height / 2 - 12);
-  boardContext.font = "16px Arial, Helvetica, sans-serif";
-  boardContext.fillText("Retornando ao inicio", boardCanvas.width / 2, boardCanvas.height / 2 + 24);
+  boardContext.font = "14px 'Inter', sans-serif";
+  boardContext.fillStyle = "#64748b";
+  boardContext.fillText("Retornando ao início", boardCanvas.width / 2, boardCanvas.height / 2 + 24);
 }
 
 function startPlaying() {
