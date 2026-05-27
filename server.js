@@ -119,7 +119,7 @@ function handleMessage(socket, message) {
     return;
   }
 
-  if (data.type === "state" || data.type === "result") {
+  if (data.type === "ready" || data.type === "state" || data.type === "result") {
     const room = rooms.get(socket.roomCode);
     if (room) {
       broadcast(room, data, socket);

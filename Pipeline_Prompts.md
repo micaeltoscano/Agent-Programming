@@ -332,3 +332,122 @@ Ao concluir esta etapa, exiba no console:
 "ETAPA 6 CONCLUÍDA — aguardando validação"
 
 Não avance para nenhuma nova etapa sem validação explícita do agente validador.
+
+---
+
+## Fase 7: Refinamentos Finais e Melhorias de Interface
+
+Realize pequenos ajustes finais para melhorar a experiência geral do jogo.
+
+### Interface do Modo Contra Bot
+
+Melhore a tela do modo Contra Bot, garantindo que os três campos fiquem bem organizados.
+
+A interface deve:
+
+- respeitar as divisórias entre cada jogador/bot;
+- deixar claro o espaço de cada competidor;
+- evitar sobreposição de elementos;
+- alinhar melhor campos, placares, nomes e informações;
+- manter boa legibilidade durante a partida.
+
+### Multiplayer Online
+
+Melhore o fluxo do Multiplayer Online.
+
+A partida só deve começar quando:
+
+- o Jogador 1 estiver conectado;
+- o Jogador 2 estiver conectado;
+- ambos estiverem prontos para iniciar.
+
+Enquanto os dois jogadores não estiverem prontos, o jogo deve mostrar uma tela ou mensagem de espera.
+
+### Bomba de Linha
+
+Revise a mecânica da Bomba de Linha.
+
+Verifique se a bomba realmente está explodindo visualmente e removendo blocos corretamente.
+
+Caso o efeito esteja fraco, intensifique a animação usando:
+
+- mais partículas;
+- cores mais visíveis;
+- expansão maior da explosão;
+- brilho;
+- tremor leve no campo;
+- efeito sonoro visual ou indicação textual.
+
+### Efeitos Visuais Gerais
+
+Melhore os efeitos visuais existentes no jogo.
+
+Os efeitos devem ficar mais claros em situações como:
+
+- remoção de linhas;
+- combos;
+- travamento de peça;
+- explosão da bomba;
+- game over;
+- mudança de nível.
+
+### Organização da Tela
+
+Ajuste o layout geral do jogo.
+
+O jogo deve respeitar melhor os espaços da tela, mantendo:
+
+- alinhamento entre elementos;
+- espaçamento consistente;
+- textos legíveis;
+- botões bem posicionados;
+- menus organizados;
+- campos centralizados ou distribuídos corretamente.
+
+### Navegação e Retorno ao Menu
+
+Adicione opções mais fáceis para voltar ao menu.
+
+O jogador deve conseguir voltar ao menu:
+
+- após perder uma partida;
+- ao entrar em uma opção errada;
+- a partir das telas de modo de jogo;
+- a partir das telas de dificuldade;
+- a partir da tela de espera do multiplayer.
+
+### Textos de Pontuação e Combo
+
+Adicione textos visuais informando ganhos de pontuação e tipos de combo.
+
+O jogo deve exibir mensagens como:
+
+- quantidade de pontos ganhos;
+- tipo de combo realizado;
+- linhas removidas;
+- bônus da bomba;
+- bônus de soft drop;
+- bônus de hard drop;
+- bônus de back-to-back;
+- bônus de T-Spin.
+
+Esses textos devem aparecer de forma temporária e desaparecer suavemente.
+
+### Pausa
+
+Adicione uma opção de pausar o jogo.
+
+A pausa deve permitir:
+
+- pausar e retomar a partida;
+- mostrar claramente que o jogo está pausado;
+- impedir que as peças continuem caindo enquanto pausado;
+- impedir ações indevidas durante a pausa.
+
+A pausa pode ser ativada por tecla ou botão na interface.
+
+Ao concluir esta etapa, exiba no console:
+
+"ETAPA 7 CONCLUÍDA — aguardando validação"
+
+Não avance para nenhuma nova etapa sem validação explícita do agente validador.

@@ -43,10 +43,12 @@ const modeButtonsElement = document.getElementById("mode-buttons");
 const multiplayerPanelElement = document.getElementById("multiplayer-panel");
 const createRoomButton = document.getElementById("create-room-button");
 const joinRoomButton = document.getElementById("join-room-button");
+const readyButton = document.getElementById("ready-button");
 const roomCodeInput = document.getElementById("room-code-input");
 const roomStatusElement = document.getElementById("room-status");
 const botPanelElement = document.getElementById("bot-panel");
 const botStatusElement = document.getElementById("bot-status");
+const screenMenuButton = document.getElementById("screen-menu-button");
 const rankingElement = document.getElementById("ranking");
 const screenRankingElement = document.getElementById("screen-ranking");
 const remoteScoreRow = document.getElementById("remote-score-row");
@@ -139,6 +141,10 @@ let multiplayerResult = "";
 let lastStateSync = 0;
 let botGames = [];
 let botFinalRanking = [];
+let paused = false;
+let floatingTexts = [];
+let localReady = false;
+let remoteReady = false;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -205,11 +211,15 @@ function resetGame() {
   particles = [];
   lineEffects = [];
   lockEffects = [];
+  floatingTexts = [];
   shakeTime = 0;
+  paused = false;
   remoteState = null;
   remoteGameOver = false;
   multiplayerResult = "";
   lastStateSync = 0;
+  localReady = false;
+  remoteReady = false;
   if (gameMode === "bot") {
     botGames = [createBotGame("VILLACORTA 67", "balanced"), createBotGame("VILLACORTA 69", "clean")];
     botFinalRanking = [];
@@ -249,6 +259,7 @@ function updateScreen() {
   modeButtonsElement.hidden = mode !== "title";
   multiplayerPanelElement.hidden = mode !== "multiplayerLobby";
   botPanelElement.hidden = mode !== "botDifficulty";
+  screenMenuButton.hidden = mode === "title" || mode === "playing";
 
   if (mode === "title") {
     screenTitleElement.textContent = "Tetris Arcade";
@@ -402,6 +413,7 @@ function softDrop() {
   if (!collides(currentPiece, currentPiece.x, currentPiece.y + 1)) {
     currentPiece.y += 1;
     score += 1;
+    addFloatingText("+1", currentPiece.x * BLOCK + BLOCK, currentPiece.y * BLOCK, "#67d7d1");
     lastMoveWasRotation = false;
     updateHighScore();
     updateStats();
@@ -423,6 +435,9 @@ function hardDrop() {
   }
 
   score += distance * 2;
+  if (distance > 0) {
+    addFloatingText(`Hard +${distance * 2}`, currentPiece.x * BLOCK + BLOCK, currentPiece.y * BLOCK, "#67d7d1");
+  }
   lastMoveWasRotation = false;
   updateHighScore();
   updateStats();
@@ -458,6 +473,7 @@ function lockPiece() {
     bombDestroyed = activateLineBomb(lockedCells);
     if (bombDestroyed > 0) {
       score += bombDestroyed * BOMB_BLOCK_POINTS;
+      addFloatingText(`Bomba +${bombDestroyed * BOMB_BLOCK_POINTS}`, boardCanvas.width / 2, boardCanvas.height / 2, "#ea5667");
     }
   }
 
@@ -546,17 +562,23 @@ function applyScore(cleared, wasTSpin) {
 
   if (wasTSpin) {
     points += (T_SPIN_POINTS[cleared] || T_SPIN_POINTS[0]) * level;
+    if (cleared > 0) {
+      addFloatingText("T-Spin", boardCanvas.width / 2, boardCanvas.height / 2 - 34, "#a56de2");
+    }
   } else if (cleared > 0) {
     points += LINE_POINTS[cleared] * level;
+    addFloatingText(`${cleared} linha${cleared > 1 ? "s" : ""}`, boardCanvas.width / 2, boardCanvas.height / 2 - 34, "#f4d35e");
   }
 
   if (cleared > 0 && combo > 0) {
     points += combo * 50 * level;
     addComboEffect();
+    addFloatingText(`Combo ${combo}`, boardCanvas.width / 2, boardCanvas.height / 2 - 58, "#67d7d1");
   }
 
   if (difficultClear && backToBack) {
     points = Math.floor(points * 1.5);
+    addFloatingText("Back-to-Back", boardCanvas.width / 2, boardCanvas.height / 2 - 82, "#f4d35e");
   }
 
   if (difficultClear) {
@@ -566,6 +588,9 @@ function applyScore(cleared, wasTSpin) {
   }
 
   score += points;
+  if (points > 0) {
+    addFloatingText(`+${points}`, boardCanvas.width / 2, boardCanvas.height / 2 + 18, "#f7f4ea");
+  }
   updateHighScore();
   updateStats();
 }
@@ -668,7 +693,7 @@ function update(time = 0) {
 
   updateAttractLoop(time);
 
-  if (mode === "playing" || mode === "demo") {
+  if ((mode === "playing" || mode === "demo") && !paused) {
     dropCounter += deltaTime;
 
     if (mode === "demo") {
@@ -760,6 +785,10 @@ function draw() {
   }
 
   drawEffects();
+  drawFloatingTexts(boardContext, floatingTexts);
+  if (paused && mode === "playing") {
+    drawPauseOverlay(boardContext, boardCanvas);
+  }
   boardContext.restore();
 
   drawNext();
@@ -1210,9 +1239,9 @@ function addBotExplosion(game, x, y) {
   const centerX = x * BLOCK + BLOCK / 2;
   const centerY = y * BLOCK + BLOCK / 2;
 
-  for (let i = 0; i < 8; i += 1) {
+  for (let i = 0; i < 18; i += 1) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 1.5 + Math.random() * 4;
+    const speed = 2.2 + Math.random() * 6;
     game.particles.push({
       x: centerX,
       y: centerY,
@@ -1221,7 +1250,7 @@ function addBotExplosion(game, x, y) {
       life: 480,
       maxLife: 480,
       color: ["#f4d35e", "#ea5667", "#67d7d1"][Math.floor(Math.random() * 3)],
-      size: 2 + Math.random() * 4
+      size: 3 + Math.random() * 5
     });
   }
 }
@@ -1400,9 +1429,11 @@ function addExplosion(x, y) {
   const centerX = x * BLOCK + BLOCK / 2;
   const centerY = y * BLOCK + BLOCK / 2;
 
-  for (let i = 0; i < 10; i += 1) {
+  addFloatingText("BOOM", centerX, centerY, "#ea5667");
+
+  for (let i = 0; i < 22; i += 1) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 1.5 + Math.random() * 4;
+    const speed = 2.2 + Math.random() * 6;
     particles.push({
       x: centerX,
       y: centerY,
@@ -1411,9 +1442,21 @@ function addExplosion(x, y) {
       life: 480,
       maxLife: 480,
       color: ["#f4d35e", "#ea5667", "#67d7d1"][Math.floor(Math.random() * 3)],
-      size: 2 + Math.random() * 4
+      size: 3 + Math.random() * 5
     });
   }
+}
+
+function addFloatingText(text, x, y, color = "#f7f4ea") {
+  floatingTexts.push({
+    text,
+    x,
+    y,
+    vy: -0.45,
+    life: 900,
+    maxLife: 900,
+    color
+  });
 }
 
 function updateEffects(deltaTime) {
@@ -1429,6 +1472,14 @@ function updateEffects(deltaTime) {
     }))
     .filter((particle) => particle.life > 0);
 
+  floatingTexts = floatingTexts
+    .map((item) => ({
+      ...item,
+      y: item.y + item.vy,
+      life: item.life - deltaTime
+    }))
+    .filter((item) => item.life > 0);
+
   lineEffects = lineEffects
     .map((effect) => ({
       ...effect,
@@ -1442,6 +1493,27 @@ function updateEffects(deltaTime) {
       life: effect.life - deltaTime
     }))
     .filter((effect) => effect.life > 0);
+}
+
+function drawFloatingTexts(context, items) {
+  context.save();
+  context.textAlign = "center";
+  context.font = "700 16px Arial, Helvetica, sans-serif";
+  items.forEach((item) => {
+    context.globalAlpha = item.life / item.maxLife;
+    context.fillStyle = item.color;
+    context.fillText(item.text, item.x, item.y);
+  });
+  context.restore();
+}
+
+function drawPauseOverlay(context, canvas) {
+  context.fillStyle = "rgba(9, 10, 13, 0.72)";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#f7f4ea";
+  context.font = "700 34px Arial, Helvetica, sans-serif";
+  context.textAlign = "center";
+  context.fillText("PAUSADO", canvas.width / 2, canvas.height / 2);
 }
 
 function drawEffects() {
@@ -1535,6 +1607,11 @@ function openMultiplayerLobby() {
   gameMode = "multiplayer";
   mode = "multiplayerLobby";
   multiplayerResult = "";
+  localReady = false;
+  remoteReady = false;
+  readyButton.hidden = true;
+  readyButton.textContent = "Pronto";
+  roomStatusElement.textContent = "Aguardando sala";
   updateScreen();
 }
 
@@ -1568,15 +1645,22 @@ function handleSocketMessage(data) {
     roomCode = data.code;
     playerLabel = data.player;
     roomStatusElement.textContent = `Sala ${roomCode}. Aguardando Jogador 2`;
+    readyButton.hidden = false;
     updateModeLayout();
   } else if (data.type === "joined") {
     roomCode = data.code;
     playerLabel = data.player;
     roomStatusElement.textContent = `Conectado na sala ${roomCode}`;
-    startMultiplayerGame();
+    readyButton.hidden = false;
+    updateModeLayout();
   } else if (data.type === "peerJoined") {
-    roomStatusElement.textContent = `Jogador conectado na sala ${roomCode}`;
-    startMultiplayerGame();
+    roomStatusElement.textContent = `Jogador conectado na sala ${roomCode}. Marque pronto`;
+  } else if (data.type === "ready") {
+    remoteReady = true;
+    roomStatusElement.textContent = localReady ? "Ambos prontos. Iniciando..." : "Outro jogador pronto";
+    if (localReady) {
+      startMultiplayerGame();
+    }
   } else if (data.type === "state") {
     remoteState = data.state;
     remoteGameOver = Boolean(remoteState.gameOver);
@@ -1602,6 +1686,16 @@ function startMultiplayerGame() {
   multiplayerResult = "";
   setMode("playing");
   sendMultiplayerState();
+}
+
+function returnToMenu() {
+  closeSocket();
+  gameMode = "solo";
+  playerLabel = "Jogador Solo";
+  localReady = false;
+  remoteReady = false;
+  paused = false;
+  setMode("title");
 }
 
 function finishMultiplayerByScore() {
@@ -1656,7 +1750,7 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
 
     if (mode === "gameOver") {
-      setMode("title");
+      returnToMenu();
     } else if (mode === "title" || mode === "demo" || mode === "scores") {
       startSolo();
     }
@@ -1664,7 +1758,16 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
-  if (event.key === "ArrowLeft") {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    returnToMenu();
+  } else if (event.key.toLowerCase() === "p") {
+    event.preventDefault();
+    paused = !paused;
+    draw();
+  } else if (paused) {
+    event.preventDefault();
+  } else if (event.key === "ArrowLeft") {
     event.preventDefault();
     movePiece(-1);
   } else if (event.key === "ArrowRight") {
@@ -1688,8 +1791,20 @@ document.addEventListener("keydown", (event) => {
 
 screenElement.addEventListener("click", () => {
   if (mode === "gameOver") {
-    setMode("title");
+    returnToMenu();
   }
+});
+
+screenMenuButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  returnToMenu();
+});
+
+document.querySelectorAll(".mode-panel .back-menu-button").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    returnToMenu();
+  });
 });
 
 startButton.addEventListener("click", (event) => {
@@ -1740,6 +1855,21 @@ joinRoomButton.addEventListener("click", (event) => {
   }
 });
 
+readyButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  localReady = true;
+  readyButton.textContent = "Pronto!";
+  roomStatusElement.textContent = remoteReady ? "Ambos prontos. Iniciando..." : "Aguardando outro jogador ficar pronto";
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ type: "ready" }));
+  }
+
+  if (remoteReady) {
+    startMultiplayerGame();
+  }
+});
+
 document.querySelectorAll(".difficulty-button").forEach((button) => {
   button.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -1756,4 +1886,4 @@ document.querySelectorAll(".difficulty-button").forEach((button) => {
 resetGame();
 setMode("title");
 requestAnimationFrame(update);
-console.log("ETAPA 6 CONCLUÍDA — aguardando validação");
+console.log("ETAPA 7 CONCLUÍDA — aguardando validação");
