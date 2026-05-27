@@ -209,6 +209,30 @@ body {
   width: 100%;
 }
 
+.game-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 8;
+  display: flex;
+  gap: 8px;
+}
+
+.icon-action-button {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #0f172a;
+  border-color: rgba(37, 99, 235, 0.18);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.icon-action-button.is-paused {
+  background: linear-gradient(135deg, #2563eb, #0f172a);
+  color: #ffffff;
+}
+
 .side-panel {
   padding: 16px;
   display: flex;
@@ -452,7 +476,7 @@ input:focus {
   border-color: rgba(59, 130, 246, 0.4);
 }
 
-/* Aura++ Button (Difficult) */
+/* Difícil / Aura++ Button */
 .difficulty-button[data-difficulty="dificil"] {
   background: linear-gradient(135deg, #dbeafe, #2563eb);
   border-color: rgba(37, 99, 235, 0.3);
@@ -624,8 +648,81 @@ kbd {
     grid-template-columns: 1fr;
   }
 
+  .board-set.multiplayer {
+    grid-template-columns: minmax(0, 1fr) minmax(86px, 112px);
+    gap: 8px;
+    align-items: start;
+  }
+
+  .board-set.multiplayer .board-panel:first-child {
+    min-width: 0;
+  }
+
+  .board-set.multiplayer .board-panel:first-child canvas {
+    max-height: min(58vh, 420px);
+  }
+
+  .board-set.multiplayer #opponent-panel {
+    padding: 7px 5px;
+    border-radius: 14px;
+  }
+
+  .board-set.multiplayer #opponent-panel h2 {
+    min-height: 24px;
+    margin-bottom: 5px;
+    font-size: 10px;
+    line-height: 1.15;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .board-set.multiplayer #opponent-panel canvas {
+    max-height: min(32vh, 210px);
+    border-radius: 8px;
+  }
+
+  .board-set.bot-mode {
+    grid-template-columns: repeat(3, minmax(104px, 1fr));
+    gap: 8px;
+    align-items: start;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .board-set.bot-mode .board-panel {
+    padding: 8px 6px;
+    border-radius: 14px;
+  }
+
+  .board-set.bot-mode .board-panel h2 {
+    min-height: 28px;
+    margin-bottom: 5px;
+    font-size: 10px;
+    line-height: 1.15;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .board-set.bot-mode .board-panel canvas {
+    max-height: min(46vh, 280px);
+    border-radius: 8px;
+  }
+
   .board-panel canvas {
     max-height: min(60vh, 420px);
+  }
+
+  .game-actions {
+    top: 10px;
+    right: 10px;
+  }
+
+  .icon-action-button {
+    min-height: 32px;
+    padding: 0 11px;
+    font-size: 12px;
   }
 
   .side-panel {

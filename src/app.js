@@ -24,6 +24,7 @@ const opponentLabelElement = document.getElementById("opponent-label");
 const opponentCanvas = document.getElementById("opponent-board");
 const opponentContext = opponentCanvas.getContext("2d");
 const botTwoPanelElement = document.getElementById("bot-two-panel");
+const botTwoLabelElement = document.getElementById("bot-two-label");
 const botTwoCanvas = document.getElementById("bot-two-board");
 const botTwoContext = botTwoCanvas.getContext("2d");
 const nextCanvas = document.getElementById("next");
@@ -49,6 +50,7 @@ const roomStatusElement = document.getElementById("room-status");
 const botPanelElement = document.getElementById("bot-panel");
 const botStatusElement = document.getElementById("bot-status");
 const screenMenuButton = document.getElementById("screen-menu-button");
+const pauseButton = document.getElementById("pause-button");
 const rankingElement = document.getElementById("ranking");
 const screenRankingElement = document.getElementById("screen-ranking");
 const remoteScoreRow = document.getElementById("remote-score-row");
@@ -220,6 +222,7 @@ function resetGame() {
   lastStateSync = 0;
   localReady = false;
   remoteReady = false;
+  resetMultiplayerLobbyVisual();
   if (gameMode === "bot") {
     botGames = [createBotGame("VILLACORTA 67", "balanced"), createBotGame("VILLACORTA 69", "clean")];
     botFinalRanking = [];
@@ -298,11 +301,30 @@ function updateModeLayout() {
   boardSetElement.classList.toggle("bot-mode", isBotMode);
   opponentPanelElement.hidden = !isMultiplayer && !isBotMode;
   botTwoPanelElement.hidden = !isBotMode;
+  pauseButton.hidden = mode !== "playing";
   remoteScoreRow.hidden = gameMode !== "multiplayer";
   botOneScoreRow.hidden = gameMode !== "bot";
   botTwoScoreRow.hidden = gameMode !== "bot";
-  localLabelElement.textContent = gameMode === "multiplayer" ? playerLabel : (gameMode === "bot" ? "VOCE" : "Jogador Solo");
+  localLabelElement.textContent = gameMode === "multiplayer" ? playerLabel : (gameMode === "bot" ? "VOCÊ" : "Jogador Solo");
   opponentLabelElement.textContent = gameMode === "bot" ? "VILLACORTA 67" : (playerLabel === "Jogador 1" ? "Jogador 2" : "Jogador 1");
+  botTwoLabelElement.textContent = "VILLACORTA 69";
+  updatePauseButton();
+}
+
+function setPaused(nextPaused) {
+  if (mode !== "playing" || gameOver) {
+    return;
+  }
+
+  paused = nextPaused;
+  updatePauseButton();
+  draw();
+}
+
+function updatePauseButton() {
+  pauseButton.textContent = paused ? "Retomar" : "Pausar";
+  pauseButton.setAttribute("aria-pressed", String(paused));
+  pauseButton.classList.toggle("is-paused", paused);
 }
 
 function loadRanking() {
@@ -1170,7 +1192,7 @@ function finishBotMatchIfNeeded() {
   }
 
   botFinalRanking = [
-    { name: "VOCE", score, lines: linesCleared, level },
+    { name: "VOCÊ", score, lines: linesCleared, level },
     ...botGames.map((game) => ({ name: game.name, score: game.score, lines: game.lines, level: game.level }))
   ].sort((a, b) => b.score - a.score || b.lines - a.lines || b.level - a.level);
 
@@ -1630,14 +1652,20 @@ function sendMultiplayerState() {
 function openMultiplayerLobby() {
   gameMode = "multiplayer";
   mode = "multiplayerLobby";
+  resetMultiplayerLobbyVisual();
+  updateScreen();
+}
+
+function resetMultiplayerLobbyVisual() {
   multiplayerResult = "";
   localReady = false;
   remoteReady = false;
+  roomCode = "";
+  roomCodeInput.value = "";
   readyButton.hidden = true;
   readyButton.disabled = false;
   readyButton.textContent = "Pronto";
   roomStatusElement.textContent = "Aguardando sala";
-  updateScreen();
 }
 
 function openBotDifficulty() {
@@ -1659,7 +1687,9 @@ function connectSocket() {
   });
 
   socket.addEventListener("close", () => {
-    roomStatusElement.textContent = "Conexao encerrada";
+    if (mode === "multiplayerLobby") {
+      roomStatusElement.textContent = "Conexao encerrada";
+    }
   });
 
   return socket;
@@ -1730,6 +1760,7 @@ function returnToMenu() {
   localReady = false;
   remoteReady = false;
   paused = false;
+  resetMultiplayerLobbyVisual();
   setMode("title");
 }
 
@@ -1799,8 +1830,7 @@ document.addEventListener("keydown", (event) => {
     returnToMenu();
   } else if (event.key.toLowerCase() === "p") {
     event.preventDefault();
-    paused = !paused;
-    draw();
+    setPaused(!paused);
   } else if (paused) {
     event.preventDefault();
   } else if (event.key === "ArrowLeft") {
@@ -1834,6 +1864,11 @@ screenElement.addEventListener("click", () => {
 screenMenuButton.addEventListener("click", (event) => {
   event.stopPropagation();
   returnToMenu();
+});
+
+pauseButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setPaused(!paused);
 });
 
 document.querySelectorAll(".mode-panel .back-menu-button").forEach((button) => {
@@ -1911,7 +1946,7 @@ document.querySelectorAll(".difficulty-button").forEach((button) => {
     localStorage.setItem("tetris-bot-difficulty", selectedBotDifficulty);
     botStatusElement.textContent = `Dificuldade ${button.textContent} selecionada`;
     gameMode = "bot";
-    playerLabel = "VOCE";
+    playerLabel = "VOCÊ";
     closeSocket();
     setMode("playing");
   });
