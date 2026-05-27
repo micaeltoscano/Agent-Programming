@@ -5,6 +5,11 @@ const BASE_DROP_INTERVAL = 720;
 const MIN_DROP_INTERVAL = 80;
 const LINES_PER_LEVEL = 10;
 const HIGH_SCORE_KEY = "tetris-arcade-high-score";
+const RANKING_KEY = "tetris-arcade-ranking";
+const TITLE_TIME = 5000;
+const DEMO_TIME = 8000;
+const SCORES_TIME = 6000;
+const GAME_OVER_TIME = 5000;
 
 const LINE_POINTS = [0, 100, 300, 500, 800];
 const T_SPIN_POINTS = [400, 800, 1200, 1600];
@@ -18,6 +23,12 @@ const highScoreElement = document.getElementById("high-score");
 const levelElement = document.getElementById("level");
 const linesElement = document.getElementById("lines");
 const comboElement = document.getElementById("combo");
+const screenElement = document.getElementById("screen");
+const screenTitleElement = document.getElementById("screen-title");
+const screenSubtitleElement = document.getElementById("screen-subtitle");
+const startButton = document.getElementById("start-button");
+const rankingElement = document.getElementById("ranking");
+const screenRankingElement = document.getElementById("screen-ranking");
 
 const COLORS = {
   I: "#35ada8",
@@ -74,14 +85,19 @@ let currentPiece;
 let nextPiece;
 let lastTime = 0;
 let dropCounter = 0;
+let mode = "title";
+let modeStartedAt = 0;
 let gameOver = false;
 let score = 0;
-let highScore = Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
+let ranking = loadRanking();
+let highScore = Math.max(Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0, ranking[0] || 0);
 let level = 1;
 let linesCleared = 0;
 let combo = -1;
 let backToBack = false;
 let lastMoveWasRotation = false;
+let demoStep = 0;
+let currentScoreSaved = false;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -106,7 +122,7 @@ function randomType() {
   return PIECES[Math.floor(Math.random() * PIECES.length)];
 }
 
-function restart() {
+function resetGame() {
   board = createBoard();
   currentPiece = createPiece();
   nextPiece = createPiece();
@@ -119,9 +135,79 @@ function restart() {
   combo = -1;
   backToBack = false;
   lastMoveWasRotation = false;
-  gameOver = collides(currentPiece, currentPiece.x, currentPiece.y);
+  demoStep = 0;
+  currentScoreSaved = false;
   updateStats();
+}
+
+function setMode(nextMode) {
+  mode = nextMode;
+  modeStartedAt = performance.now();
+
+  if (mode === "playing" || mode === "demo") {
+    resetGame();
+  }
+
+  updateScreen();
   draw();
+}
+
+function updateScreen() {
+  renderRanking();
+
+  if (mode === "playing") {
+    screenElement.hidden = true;
+    return;
+  }
+
+  screenElement.hidden = false;
+  startButton.hidden = mode === "demo" || mode === "gameOver";
+
+  if (mode === "title") {
+    screenTitleElement.textContent = "Tetris Arcade";
+    screenSubtitleElement.textContent = "Pressione qualquer tecla ou clique para jogar";
+    startButton.textContent = "Jogar";
+    screenRankingElement.hidden = true;
+  } else if (mode === "demo") {
+    screenTitleElement.textContent = "Demo";
+    screenSubtitleElement.textContent = "Modo de demonstracao";
+    screenRankingElement.hidden = true;
+  } else if (mode === "scores") {
+    screenTitleElement.textContent = "High Scores";
+    screenSubtitleElement.textContent = "Ranking das melhores pontuacoes";
+    screenRankingElement.hidden = false;
+  } else if (mode === "gameOver") {
+    screenTitleElement.textContent = "GAME OVER";
+    screenSubtitleElement.textContent = `Pontuacao final: ${score}`;
+    screenRankingElement.hidden = false;
+  }
+}
+
+function loadRanking() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(RANKING_KEY) || "[]");
+    return Array.isArray(saved) ? saved.filter(Number.isFinite).slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveScoreToRanking() {
+  if (currentScoreSaved || score <= 0) {
+    return;
+  }
+
+  currentScoreSaved = true;
+  ranking = [...ranking, score].sort((a, b) => b - a).slice(0, 5);
+  localStorage.setItem(RANKING_KEY, JSON.stringify(ranking));
+  updateHighScore();
+  renderRanking();
+}
+
+function renderRanking() {
+  const items = ranking.map((value) => `<li>${value}</li>`).join("");
+  rankingElement.innerHTML = items;
+  screenRankingElement.innerHTML = items;
 }
 
 function collides(piece, nextX, nextY, shape = piece.shape) {
@@ -148,10 +234,14 @@ function collides(piece, nextX, nextY, shape = piece.shape) {
 }
 
 function movePiece(offsetX) {
-  if (gameOver) {
+  if (gameOver || mode !== "playing") {
     return;
   }
 
+  moveActivePiece(offsetX);
+}
+
+function moveActivePiece(offsetX) {
   const nextX = currentPiece.x + offsetX;
   if (!collides(currentPiece, nextX, currentPiece.y)) {
     currentPiece.x = nextX;
@@ -160,7 +250,15 @@ function movePiece(offsetX) {
 }
 
 function rotatePiece() {
-  if (gameOver || currentPiece.type === "O") {
+  if (gameOver || mode !== "playing") {
+    return;
+  }
+
+  rotateActivePiece();
+}
+
+function rotateActivePiece() {
+  if (currentPiece.type === "O") {
     return;
   }
 
@@ -182,7 +280,7 @@ function rotateMatrix(matrix) {
 }
 
 function softDrop() {
-  if (gameOver) {
+  if (gameOver || mode !== "playing") {
     return;
   }
 
@@ -199,7 +297,7 @@ function softDrop() {
 }
 
 function hardDrop() {
-  if (gameOver) {
+  if (gameOver || mode !== "playing") {
     return;
   }
 
@@ -257,6 +355,10 @@ function clearLines() {
 }
 
 function applyScore(cleared, wasTSpin) {
+  if (mode !== "playing") {
+    return;
+  }
+
   if (cleared > 0) {
     linesCleared += cleared;
     level = Math.floor(linesCleared / LINES_PER_LEVEL) + 1;
@@ -341,10 +443,19 @@ function spawnPiece() {
   nextPiece = createPiece();
 
   if (collides(currentPiece, currentPiece.x, currentPiece.y)) {
-    gameOver = true;
-    updateHighScore();
-    updateStats();
+    finishGame();
   }
+}
+
+function finishGame() {
+  if (mode === "demo") {
+    resetGame();
+    return;
+  }
+
+  gameOver = true;
+  saveScoreToRanking();
+  setMode("gameOver");
 }
 
 function getGhostPiece() {
@@ -359,8 +470,14 @@ function update(time = 0) {
   const deltaTime = time - lastTime;
   lastTime = time;
 
-  if (!gameOver) {
+  updateAttractLoop(time);
+
+  if (mode === "playing" || mode === "demo") {
     dropCounter += deltaTime;
+
+    if (mode === "demo") {
+      runDemo(deltaTime);
+    }
 
     if (dropCounter > getDropInterval()) {
       gravityDrop();
@@ -370,6 +487,41 @@ function update(time = 0) {
 
   draw();
   requestAnimationFrame(update);
+}
+
+function updateAttractLoop(time) {
+  const elapsed = time - modeStartedAt;
+
+  if (mode === "title" && elapsed > TITLE_TIME) {
+    setMode("demo");
+  } else if (mode === "demo" && elapsed > DEMO_TIME) {
+    setMode("scores");
+  } else if (mode === "scores" && elapsed > SCORES_TIME) {
+    setMode("title");
+  } else if (mode === "gameOver" && elapsed > GAME_OVER_TIME) {
+    setMode("title");
+  }
+}
+
+function runDemo(deltaTime) {
+  demoStep += deltaTime;
+
+  if (demoStep < 160) {
+    return;
+  }
+
+  demoStep = 0;
+  const target = Math.floor((COLS - currentPiece.shape[0].length) / 2 + Math.sin(performance.now() / 520) * 3);
+
+  if (Math.random() < 0.18) {
+    rotateActivePiece();
+  }
+
+  if (currentPiece.x < target) {
+    moveActivePiece(1);
+  } else if (currentPiece.x > target) {
+    moveActivePiece(-1);
+  }
 }
 
 function gravityDrop() {
@@ -386,8 +538,11 @@ function draw() {
   boardContext.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
   drawGrid(boardContext, COLS, ROWS, BLOCK);
   drawBoard();
-  drawPiece(getGhostPiece(), boardContext, BLOCK, 0.22, true);
-  drawPiece(currentPiece, boardContext, BLOCK);
+
+  if (currentPiece) {
+    drawPiece(getGhostPiece(), boardContext, BLOCK, 0.22, true);
+    drawPiece(currentPiece, boardContext, BLOCK);
+  }
 
   if (gameOver) {
     drawGameOver();
@@ -473,6 +628,10 @@ function drawNext() {
   nextContext.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
   drawGrid(nextContext, 4, 4, 30);
 
+  if (!nextPiece) {
+    return;
+  }
+
   const preview = {
     ...nextPiece,
     x: (4 - nextPiece.shape[0].length) / 2,
@@ -490,10 +649,26 @@ function drawGameOver() {
   boardContext.textAlign = "center";
   boardContext.fillText("GAME OVER", boardCanvas.width / 2, boardCanvas.height / 2 - 12);
   boardContext.font = "16px Arial, Helvetica, sans-serif";
-  boardContext.fillText("Pressione R para reiniciar", boardCanvas.width / 2, boardCanvas.height / 2 + 24);
+  boardContext.fillText("Retornando ao inicio", boardCanvas.width / 2, boardCanvas.height / 2 + 24);
+}
+
+function startPlaying() {
+  setMode("playing");
 }
 
 document.addEventListener("keydown", (event) => {
+  if (mode !== "playing") {
+    event.preventDefault();
+
+    if (mode === "gameOver") {
+      setMode("title");
+    } else {
+      startPlaying();
+    }
+
+    return;
+  }
+
   if (event.key === "ArrowLeft") {
     event.preventDefault();
     movePiece(-1);
@@ -512,10 +687,24 @@ document.addEventListener("keydown", (event) => {
     hardDrop();
     dropCounter = 0;
   } else if (event.key.toLowerCase() === "r") {
-    restart();
+    startPlaying();
   }
 });
 
-restart();
+screenElement.addEventListener("click", () => {
+  if (mode === "gameOver") {
+    setMode("title");
+  } else if (mode !== "playing") {
+    startPlaying();
+  }
+});
+
+startButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  startPlaying();
+});
+
+resetGame();
+setMode("title");
 requestAnimationFrame(update);
-console.log("ETAPA 2 CONCLUÍDA — aguardando validação");
+console.log("ETAPA 3 CONCLUÍDA — aguardando validação");

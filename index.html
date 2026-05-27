@@ -10,12 +10,18 @@
     <main class="game-shell" aria-label="Tetris Arcade">
       <section class="play-area">
         <canvas id="board" width="300" height="600" aria-label="Campo de jogo"></canvas>
+        <div id="screen" class="screen">
+          <h2 id="screen-title">Tetris Arcade</h2>
+          <p id="screen-subtitle">Pressione qualquer tecla ou clique para jogar</p>
+          <button id="start-button" type="button">Jogar</button>
+          <ol id="screen-ranking" class="ranking"></ol>
+        </div>
       </section>
 
       <aside class="side-panel" aria-label="Informacoes do jogo">
         <div class="panel-block">
           <h1>Tetris Arcade</h1>
-          <p>Fase 2: niveis e pontuacao</p>
+          <p>Fase 3: tela de abertura</p>
         </div>
 
         <div class="panel-block stats">
@@ -47,6 +53,11 @@
         <div class="panel-block">
           <h2>Proxima</h2>
           <canvas id="next" width="120" height="120" aria-label="Proxima peca"></canvas>
+        </div>
+
+        <div class="panel-block">
+          <h2>Ranking</h2>
+          <ol id="ranking" class="ranking"></ol>
         </div>
 
         <div class="panel-block controls">
