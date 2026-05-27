@@ -1610,6 +1610,7 @@ function openMultiplayerLobby() {
   localReady = false;
   remoteReady = false;
   readyButton.hidden = true;
+  readyButton.disabled = false;
   readyButton.textContent = "Pronto";
   roomStatusElement.textContent = "Aguardando sala";
   updateScreen();
@@ -1646,21 +1647,24 @@ function handleSocketMessage(data) {
     playerLabel = data.player;
     roomStatusElement.textContent = `Sala ${roomCode}. Aguardando Jogador 2`;
     readyButton.hidden = false;
+    readyButton.disabled = false;
     updateModeLayout();
   } else if (data.type === "joined") {
     roomCode = data.code;
     playerLabel = data.player;
-    roomStatusElement.textContent = `Conectado na sala ${roomCode}`;
+    remoteReady = Boolean(data.remoteReady);
+    roomStatusElement.textContent = remoteReady ? `Conectado na sala ${roomCode}. Outro jogador pronto` : `Conectado na sala ${roomCode}`;
     readyButton.hidden = false;
+    readyButton.disabled = false;
     updateModeLayout();
   } else if (data.type === "peerJoined") {
     roomStatusElement.textContent = `Jogador conectado na sala ${roomCode}. Marque pronto`;
   } else if (data.type === "ready") {
     remoteReady = true;
     roomStatusElement.textContent = localReady ? "Ambos prontos. Iniciando..." : "Outro jogador pronto";
-    if (localReady) {
-      startMultiplayerGame();
-    }
+  } else if (data.type === "multiplayerStart") {
+    roomStatusElement.textContent = "Ambos prontos. Iniciando...";
+    startMultiplayerGame();
   } else if (data.type === "state") {
     remoteState = data.state;
     remoteGameOver = Boolean(remoteState.gameOver);
@@ -1680,12 +1684,19 @@ function handleSocketMessage(data) {
 }
 
 function startMultiplayerGame() {
+  if (gameMode === "multiplayer" && mode === "playing") {
+    return;
+  }
+
   gameMode = "multiplayer";
   remoteState = null;
   remoteGameOver = false;
   multiplayerResult = "";
   setMode("playing");
   sendMultiplayerState();
+  setTimeout(sendMultiplayerState, 120);
+  setTimeout(sendMultiplayerState, 360);
+  setTimeout(sendMultiplayerState, 720);
 }
 
 function returnToMenu() {
@@ -1859,15 +1870,13 @@ readyButton.addEventListener("click", (event) => {
   event.stopPropagation();
   localReady = true;
   readyButton.textContent = "Pronto!";
+  readyButton.disabled = true;
   roomStatusElement.textContent = remoteReady ? "Ambos prontos. Iniciando..." : "Aguardando outro jogador ficar pronto";
 
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ type: "ready" }));
   }
 
-  if (remoteReady) {
-    startMultiplayerGame();
-  }
 });
 
 document.querySelectorAll(".difficulty-button").forEach((button) => {

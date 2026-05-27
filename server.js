@@ -40,7 +40,8 @@ const server = http.createServer((request, response) => {
     }
 
     response.writeHead(200, {
-      "Content-Type": MIME_TYPES[path.extname(filePath)] || "application/octet-stream"
+      "Content-Type": MIME_TYPES[path.extname(filePath)] || "application/octet-stream",
+      "Cache-Control": "no-store"
     });
     response.end(data);
   });
@@ -66,13 +67,13 @@ server.on("upgrade", (request, socket) => {
     ""
   ].join("\r\n"));
 
-  socket.on("data", (buffer) => {
-    const message = decodeFrame(buffer);
-    if (!message) {
-      return;
-    }
+  socket.frameBuffer = Buffer.alloc(0);
+  socket.setNoDelay(true);
 
-    handleMessage(socket, message);
+  socket.on("data", (buffer) => {
+    const result = decodeFrames(Buffer.concat([socket.frameBuffer, buffer]));
+    socket.frameBuffer = result.remaining;
+    result.messages.forEach((message) => handleMessage(socket, message));
   });
 
   socket.on("close", () => removeClient(socket));
@@ -81,7 +82,7 @@ server.on("upgrade", (request, socket) => {
 
 server.listen(PORT, () => {
   console.log(`Servidor em http://localhost:${PORT}`);
-  console.log("ETAPA 5 CONCLUÍDA — aguardando validação");
+  console.log("ETAPA 7 CONCLUÍDA — aguardando validação");
 });
 
 function handleMessage(socket, message) {
@@ -94,8 +95,9 @@ function handleMessage(socket, message) {
   }
 
   if (data.type === "create") {
+    removeClient(socket);
     const code = createCode();
-    rooms.set(code, { players: [socket] });
+    rooms.set(code, { players: [socket], ready: new Set(), started: false });
     socket.roomCode = code;
     socket.playerIndex = 0;
     send(socket, { type: "roomCreated", code, player: "Jogador 1" });
@@ -103,10 +105,11 @@ function handleMessage(socket, message) {
   }
 
   if (data.type === "join") {
+    removeClient(socket);
     const code = String(data.code || "").trim().toUpperCase();
     const room = rooms.get(code);
 
-    if (!room || room.players.length >= 2) {
+    if (!room || room.started || room.players.length >= 2) {
       send(socket, { type: "error", message: "Sala indisponivel" });
       return;
     }
@@ -114,12 +117,26 @@ function handleMessage(socket, message) {
     room.players.push(socket);
     socket.roomCode = code;
     socket.playerIndex = 1;
-    send(socket, { type: "joined", code, player: "Jogador 2" });
+    send(socket, { type: "joined", code, player: "Jogador 2", remoteReady: room.ready.has(room.players[0]) });
     broadcast(room, { type: "peerJoined" }, socket);
     return;
   }
 
-  if (data.type === "ready" || data.type === "state" || data.type === "result") {
+  if (data.type === "ready") {
+    const room = rooms.get(socket.roomCode);
+    if (room) {
+      room.ready.add(socket);
+      broadcast(room, { type: "ready" }, socket);
+
+      if (room.players.length === 2 && room.players.every((player) => room.ready.has(player))) {
+        room.started = true;
+        sendToRoom(room, { type: "multiplayerStart" });
+      }
+    }
+    return;
+  }
+
+  if (data.type === "state" || data.type === "result") {
     const room = rooms.get(socket.roomCode);
     if (room) {
       broadcast(room, data, socket);
@@ -141,15 +158,21 @@ function removeClient(socket) {
   const room = rooms.get(socket.roomCode);
 
   if (!room) {
+    delete socket.roomCode;
+    delete socket.playerIndex;
     return;
   }
 
   room.players = room.players.filter((player) => player !== socket);
+  room.ready.delete(socket);
   broadcast(room, { type: "peerLeft" }, socket);
 
   if (room.players.length === 0) {
     rooms.delete(socket.roomCode);
   }
+
+  delete socket.roomCode;
+  delete socket.playerIndex;
 }
 
 function broadcast(room, payload, except) {
@@ -158,6 +181,10 @@ function broadcast(room, payload, except) {
       send(player, payload);
     }
   });
+}
+
+function sendToRoom(room, payload) {
+  room.players.forEach((player) => send(player, payload));
 }
 
 function send(socket, payload) {
@@ -173,33 +200,61 @@ function send(socket, payload) {
   socket.write(Buffer.concat([header, data]));
 }
 
-function decodeFrame(buffer) {
-  const opcode = buffer[0] & 0x0f;
+function decodeFrames(buffer) {
+  const messages = [];
+  let cursor = 0;
 
-  if (opcode === 0x08) {
-    return null;
+  while (cursor + 2 <= buffer.length) {
+    const opcode = buffer[cursor] & 0x0f;
+    const masked = Boolean(buffer[cursor + 1] & 0x80);
+    let length = buffer[cursor + 1] & 0x7f;
+    let offset = cursor + 2;
+
+    if (length === 126) {
+      if (offset + 2 > buffer.length) {
+        break;
+      }
+      length = buffer.readUInt16BE(offset);
+      offset += 2;
+    } else if (length === 127) {
+      if (offset + 8 > buffer.length) {
+        break;
+      }
+      length = Number(buffer.readBigUInt64BE(offset));
+      offset += 8;
+    }
+
+    const maskLength = masked ? 4 : 0;
+    if (offset + maskLength + length > buffer.length) {
+      break;
+    }
+
+    const mask = masked ? buffer.slice(offset, offset + 4) : null;
+    offset += maskLength;
+    const payload = Buffer.from(buffer.slice(offset, offset + length));
+    cursor = offset + length;
+
+    if (opcode === 0x08) {
+      continue;
+    }
+
+    if (opcode !== 0x01) {
+      continue;
+    }
+
+    if (mask) {
+      for (let i = 0; i < payload.length; i += 1) {
+        payload[i] ^= mask[i % 4];
+      }
+    }
+
+    messages.push(payload.toString("utf8"));
   }
 
-  let length = buffer[1] & 0x7f;
-  let offset = 2;
-
-  if (length === 126) {
-    length = buffer.readUInt16BE(offset);
-    offset += 2;
-  } else if (length === 127) {
-    length = Number(buffer.readBigUInt64BE(offset));
-    offset += 8;
-  }
-
-  const mask = buffer.slice(offset, offset + 4);
-  offset += 4;
-  const payload = buffer.slice(offset, offset + length);
-
-  for (let i = 0; i < payload.length; i += 1) {
-    payload[i] ^= mask[i % 4];
-  }
-
-  return payload.toString("utf8");
+  return {
+    messages,
+    remaining: buffer.slice(cursor)
+  };
 }
 
 function loadEnv() {
