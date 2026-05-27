@@ -452,7 +452,7 @@ input:focus {
   border-color: rgba(59, 130, 246, 0.4);
 }
 
-/* Aura++ Button (Difficult) */
+/* Difícil / Aura++ Button */
 .difficulty-button[data-difficulty="dificil"] {
   background: linear-gradient(135deg, #dbeafe, #2563eb);
   border-color: rgba(37, 99, 235, 0.3);
@@ -622,6 +622,34 @@ kbd {
   .board-set.multiplayer,
   .board-set.bot-mode {
     grid-template-columns: 1fr;
+  }
+
+  .board-set.bot-mode {
+    grid-template-columns: repeat(3, minmax(104px, 1fr));
+    gap: 8px;
+    align-items: start;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .board-set.bot-mode .board-panel {
+    padding: 8px 6px;
+    border-radius: 14px;
+  }
+
+  .board-set.bot-mode .board-panel h2 {
+    min-height: 28px;
+    margin-bottom: 5px;
+    font-size: 10px;
+    line-height: 1.15;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .board-set.bot-mode .board-panel canvas {
+    max-height: min(46vh, 280px);
+    border-radius: 8px;
   }
 
   .board-panel canvas {

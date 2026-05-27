@@ -24,6 +24,7 @@ const opponentLabelElement = document.getElementById("opponent-label");
 const opponentCanvas = document.getElementById("opponent-board");
 const opponentContext = opponentCanvas.getContext("2d");
 const botTwoPanelElement = document.getElementById("bot-two-panel");
+const botTwoLabelElement = document.getElementById("bot-two-label");
 const botTwoCanvas = document.getElementById("bot-two-board");
 const botTwoContext = botTwoCanvas.getContext("2d");
 const nextCanvas = document.getElementById("next");
@@ -220,6 +221,7 @@ function resetGame() {
   lastStateSync = 0;
   localReady = false;
   remoteReady = false;
+  resetMultiplayerLobbyVisual();
   if (gameMode === "bot") {
     botGames = [createBotGame("VILLACORTA 67", "balanced"), createBotGame("VILLACORTA 69", "clean")];
     botFinalRanking = [];
@@ -301,8 +303,9 @@ function updateModeLayout() {
   remoteScoreRow.hidden = gameMode !== "multiplayer";
   botOneScoreRow.hidden = gameMode !== "bot";
   botTwoScoreRow.hidden = gameMode !== "bot";
-  localLabelElement.textContent = gameMode === "multiplayer" ? playerLabel : (gameMode === "bot" ? "VOCE" : "Jogador Solo");
+  localLabelElement.textContent = gameMode === "multiplayer" ? playerLabel : (gameMode === "bot" ? "VOCÊ" : "Jogador Solo");
   opponentLabelElement.textContent = gameMode === "bot" ? "VILLACORTA 67" : (playerLabel === "Jogador 1" ? "Jogador 2" : "Jogador 1");
+  botTwoLabelElement.textContent = "VILLACORTA 69";
 }
 
 function loadRanking() {
@@ -415,7 +418,10 @@ function softDrop() {
   if (!collides(currentPiece, currentPiece.x, currentPiece.y + 1)) {
     currentPiece.y += 1;
     score += 1;
-    addFloatingText("+1", currentPiece.x * BLOCK + BLOCK, currentPiece.y * BLOCK, "#67d7d1");
+    addFloatingText("+1 SOFT", currentPiece.x * BLOCK + BLOCK, currentPiece.y * BLOCK, "#06b6d4", {
+      size: 17,
+      stroke: true
+    });
     lastMoveWasRotation = false;
     updateHighScore();
     updateStats();
@@ -438,7 +444,11 @@ function hardDrop() {
 
   score += distance * 2;
   if (distance > 0) {
-    addFloatingText(`Hard +${distance * 2}`, currentPiece.x * BLOCK + BLOCK, currentPiece.y * BLOCK, "#67d7d1");
+    addFloatingText(`HARD +${distance * 2}`, currentPiece.x * BLOCK + BLOCK, currentPiece.y * BLOCK, "#06b6d4", {
+      size: 19,
+      glow: true,
+      stroke: true
+    });
   }
   lastMoveWasRotation = false;
   updateHighScore();
@@ -475,7 +485,13 @@ function lockPiece() {
     bombDestroyed = activateLineBomb(lockedCells);
     if (bombDestroyed > 0) {
       score += bombDestroyed * BOMB_BLOCK_POINTS;
-      addFloatingText(`Bomba +${bombDestroyed * BOMB_BLOCK_POINTS}`, boardCanvas.width / 2, boardCanvas.height / 2, "#ea5667");
+      addFloatingText(`BOMBA +${bombDestroyed * BOMB_BLOCK_POINTS}`, boardCanvas.width / 2, boardCanvas.height / 2, "#ef4444", {
+        size: 28,
+        life: 1250,
+        vy: -0.28,
+        glow: true,
+        stroke: true
+      });
     }
   }
 
@@ -565,22 +581,39 @@ function applyScore(cleared, wasTSpin) {
   if (wasTSpin) {
     points += (T_SPIN_POINTS[cleared] || T_SPIN_POINTS[0]) * level;
     if (cleared > 0) {
-      addFloatingText("T-Spin", boardCanvas.width / 2, boardCanvas.height / 2 - 34, "#a56de2");
+      addFloatingText("T-SPIN", boardCanvas.width / 2, boardCanvas.height / 2 - 34, "#8b5cf6", {
+        size: 24,
+        glow: true,
+        stroke: true
+      });
     }
   } else if (cleared > 0) {
     points += LINE_POINTS[cleared] * level;
-    addFloatingText(`${cleared} linha${cleared > 1 ? "s" : ""}`, boardCanvas.width / 2, boardCanvas.height / 2 - 34, "#f4d35e");
+    addFloatingText(`${cleared} LINHA${cleared > 1 ? "S" : ""}`, boardCanvas.width / 2, boardCanvas.height / 2 - 34, "#f59e0b", {
+      size: 22,
+      glow: true,
+      stroke: true
+    });
   }
 
   if (cleared > 0 && combo > 0) {
     points += combo * 50 * level;
     addComboEffect();
-    addFloatingText(`Combo ${combo}`, boardCanvas.width / 2, boardCanvas.height / 2 - 58, "#67d7d1");
+    addFloatingText(`COMBO x${combo}`, boardCanvas.width / 2, boardCanvas.height / 2 - 62, "#06b6d4", {
+      size: 24,
+      life: 1100,
+      glow: true,
+      stroke: true
+    });
   }
 
   if (difficultClear && backToBack) {
     points = Math.floor(points * 1.5);
-    addFloatingText("Back-to-Back", boardCanvas.width / 2, boardCanvas.height / 2 - 82, "#f4d35e");
+    addFloatingText("BACK-TO-BACK", boardCanvas.width / 2, boardCanvas.height / 2 - 90, "#f59e0b", {
+      size: 21,
+      glow: true,
+      stroke: true
+    });
   }
 
   if (difficultClear) {
@@ -591,7 +624,11 @@ function applyScore(cleared, wasTSpin) {
 
   score += points;
   if (points > 0) {
-    addFloatingText(`+${points}`, boardCanvas.width / 2, boardCanvas.height / 2 + 18, "#0f172a");
+    addFloatingText(`+${points} PONTOS`, boardCanvas.width / 2, boardCanvas.height / 2 + 22, "#0f172a", {
+      size: 24,
+      life: 1150,
+      stroke: true
+    });
   }
   updateHighScore();
   updateStats();
@@ -1170,7 +1207,7 @@ function finishBotMatchIfNeeded() {
   }
 
   botFinalRanking = [
-    { name: "VOCE", score, lines: linesCleared, level },
+    { name: "VOCÊ", score, lines: linesCleared, level },
     ...botGames.map((game) => ({ name: game.name, score: game.score, lines: game.lines, level: game.level }))
   ].sort((a, b) => b.score - a.score || b.lines - a.lines || b.level - a.level);
 
@@ -1241,18 +1278,18 @@ function addBotExplosion(game, x, y) {
   const centerX = x * BLOCK + BLOCK / 2;
   const centerY = y * BLOCK + BLOCK / 2;
 
-  for (let i = 0; i < 18; i += 1) {
+  for (let i = 0; i < 34; i += 1) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 2.2 + Math.random() * 6;
+    const speed = 3 + Math.random() * 8;
     game.particles.push({
       x: centerX,
       y: centerY,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      life: 480,
-      maxLife: 480,
-      color: ["#3b82f6", "#60a5fa", "#93c5fd", "#ffffff"][Math.floor(Math.random() * 4)],
-      size: 3 + Math.random() * 5
+      life: 680,
+      maxLife: 680,
+      color: ["#ef4444", "#f97316", "#facc15", "#ffffff", "#60a5fa"][Math.floor(Math.random() * 5)],
+      size: 4 + Math.random() * 8
     });
   }
 }
@@ -1328,7 +1365,12 @@ function drawBotEffects(game, context) {
     const alpha = particle.life / particle.maxLife;
     context.globalAlpha = alpha;
     context.fillStyle = particle.color;
-    context.fillRect(particle.x, particle.y, particle.size, particle.size);
+    context.shadowColor = particle.color;
+    context.shadowBlur = 12;
+    context.beginPath();
+    context.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    context.fill();
+    context.shadowBlur = 0;
     context.globalAlpha = 1;
   });
 }
@@ -1453,33 +1495,42 @@ function addExplosion(x, y) {
   const centerX = x * BLOCK + BLOCK / 2;
   const centerY = y * BLOCK + BLOCK / 2;
 
-  addFloatingText("BOOM", centerX, centerY, "#ea5667");
+  addFloatingText("BOOM!", centerX, centerY, "#ef4444", {
+    size: 22,
+    life: 950,
+    vy: -0.2,
+    glow: true,
+    stroke: true
+  });
 
-  for (let i = 0; i < 22; i += 1) {
+  for (let i = 0; i < 46; i += 1) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 2.2 + Math.random() * 6;
+    const speed = 3 + Math.random() * 9;
     particles.push({
       x: centerX,
       y: centerY,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      life: 480,
-      maxLife: 480,
-      color: ["#3b82f6", "#60a5fa", "#93c5fd", "#ffffff"][Math.floor(Math.random() * 4)],
-      size: 3 + Math.random() * 5
+      life: 720,
+      maxLife: 720,
+      color: ["#ef4444", "#f97316", "#facc15", "#ffffff", "#38bdf8"][Math.floor(Math.random() * 5)],
+      size: 4 + Math.random() * 9
     });
   }
 }
 
-function addFloatingText(text, x, y, color = "#0f172a") {
+function addFloatingText(text, x, y, color = "#0f172a", options = {}) {
   floatingTexts.push({
     text,
     x,
     y,
-    vy: -0.45,
-    life: 900,
-    maxLife: 900,
-    color
+    vy: options.vy ?? -0.45,
+    life: options.life ?? 900,
+    maxLife: options.life ?? 900,
+    color,
+    size: options.size ?? 16,
+    glow: Boolean(options.glow),
+    stroke: Boolean(options.stroke)
   });
 }
 
@@ -1522,12 +1573,20 @@ function updateEffects(deltaTime) {
 function drawFloatingTexts(context, items) {
   context.save();
   context.textAlign = "center";
-  context.font = "700 16px Arial, Helvetica, sans-serif";
   items.forEach((item) => {
     context.globalAlpha = item.life / item.maxLife;
+    context.font = `900 ${item.size}px Arial, Helvetica, sans-serif`;
+    context.lineWidth = Math.max(3, item.size * 0.18);
+    context.shadowColor = item.glow ? item.color : "transparent";
+    context.shadowBlur = item.glow ? 18 : 0;
+    if (item.stroke) {
+      context.strokeStyle = "rgba(255, 255, 255, 0.92)";
+      context.strokeText(item.text, item.x, item.y);
+    }
     context.fillStyle = item.color;
     context.fillText(item.text, item.x, item.y);
   });
+  context.shadowBlur = 0;
   context.restore();
 }
 
@@ -1562,7 +1621,12 @@ function drawEffects() {
     const alpha = particle.life / particle.maxLife;
     boardContext.globalAlpha = alpha;
     boardContext.fillStyle = particle.color;
-    boardContext.fillRect(particle.x, particle.y, particle.size, particle.size);
+    boardContext.shadowColor = particle.color;
+    boardContext.shadowBlur = 12;
+    boardContext.beginPath();
+    boardContext.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    boardContext.fill();
+    boardContext.shadowBlur = 0;
     boardContext.globalAlpha = 1;
   });
 }
@@ -1630,14 +1694,20 @@ function sendMultiplayerState() {
 function openMultiplayerLobby() {
   gameMode = "multiplayer";
   mode = "multiplayerLobby";
+  resetMultiplayerLobbyVisual();
+  updateScreen();
+}
+
+function resetMultiplayerLobbyVisual() {
   multiplayerResult = "";
   localReady = false;
   remoteReady = false;
+  roomCode = "";
+  roomCodeInput.value = "";
   readyButton.hidden = true;
   readyButton.disabled = false;
   readyButton.textContent = "Pronto";
   roomStatusElement.textContent = "Aguardando sala";
-  updateScreen();
 }
 
 function openBotDifficulty() {
@@ -1659,7 +1729,9 @@ function connectSocket() {
   });
 
   socket.addEventListener("close", () => {
-    roomStatusElement.textContent = "Conexao encerrada";
+    if (mode === "multiplayerLobby") {
+      roomStatusElement.textContent = "Conexao encerrada";
+    }
   });
 
   return socket;
@@ -1730,6 +1802,7 @@ function returnToMenu() {
   localReady = false;
   remoteReady = false;
   paused = false;
+  resetMultiplayerLobbyVisual();
   setMode("title");
 }
 
@@ -1911,7 +1984,7 @@ document.querySelectorAll(".difficulty-button").forEach((button) => {
     localStorage.setItem("tetris-bot-difficulty", selectedBotDifficulty);
     botStatusElement.textContent = `Dificuldade ${button.textContent} selecionada`;
     gameMode = "bot";
-    playerLabel = "VOCE";
+    playerLabel = "VOCÊ";
     closeSocket();
     setMode("playing");
   });
