@@ -1,6 +1,7 @@
 const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
+const FIELD_COUNT = 3;
 const BASE_DROP_INTERVAL = 720;
 const MIN_DROP_INTERVAL = 80;
 const LINES_PER_LEVEL = 10;
@@ -14,10 +15,10 @@ const GAME_OVER_TIME = 5000;
 const LINE_POINTS = [0, 100, 300, 500, 800];
 const T_SPIN_POINTS = [400, 800, 1200, 1600];
 
-const boardCanvas = document.getElementById("board");
-const boardContext = boardCanvas.getContext("2d");
-const nextCanvas = document.getElementById("next");
-const nextContext = nextCanvas.getContext("2d");
+const boardCanvases = Array.from({ length: FIELD_COUNT }, (_, index) => document.getElementById(`board-${index}`));
+const boardContexts = boardCanvases.map((canvas) => canvas.getContext("2d"));
+const nextCanvases = Array.from({ length: FIELD_COUNT }, (_, index) => document.getElementById(`next-${index}`));
+const nextContexts = nextCanvases.map((canvas) => canvas.getContext("2d"));
 const scoreElement = document.getElementById("score");
 const highScoreElement = document.getElementById("high-score");
 const levelElement = document.getElementById("level");
@@ -80,14 +81,10 @@ const SHAPES = {
 
 const PIECES = Object.keys(SHAPES);
 
-let board;
-let currentPiece;
-let nextPiece;
+let games = [];
 let lastTime = 0;
-let dropCounter = 0;
 let mode = "title";
 let modeStartedAt = 0;
-let gameOver = false;
 let score = 0;
 let ranking = loadRanking();
 let highScore = Math.max(Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0, ranking[0] || 0);
@@ -95,7 +92,6 @@ let level = 1;
 let linesCleared = 0;
 let combo = -1;
 let backToBack = false;
-let lastMoveWasRotation = false;
 let demoStep = 0;
 let currentScoreSaved = false;
 
@@ -122,19 +118,28 @@ function randomType() {
   return PIECES[Math.floor(Math.random() * PIECES.length)];
 }
 
+function createGame(index) {
+  const currentPiece = createPiece();
+
+  return {
+    index,
+    board: createBoard(),
+    currentPiece,
+    nextPiece: createPiece(),
+    dropCounter: 0,
+    gameOver: false,
+    lastMoveWasRotation: false
+  };
+}
+
 function resetGame() {
-  board = createBoard();
-  currentPiece = createPiece();
-  nextPiece = createPiece();
+  games = Array.from({ length: FIELD_COUNT }, (_, index) => createGame(index));
   lastTime = 0;
-  dropCounter = 0;
-  gameOver = false;
   score = 0;
   level = 1;
   linesCleared = 0;
   combo = -1;
   backToBack = false;
-  lastMoveWasRotation = false;
   demoStep = 0;
   currentScoreSaved = false;
   updateStats();
@@ -170,7 +175,7 @@ function updateScreen() {
     screenRankingElement.hidden = true;
   } else if (mode === "demo") {
     screenTitleElement.textContent = "Demo";
-    screenSubtitleElement.textContent = "Modo de demonstracao";
+    screenSubtitleElement.textContent = "Tres campos jogando em paralelo";
     screenRankingElement.hidden = true;
   } else if (mode === "scores") {
     screenTitleElement.textContent = "High Scores";
@@ -210,7 +215,7 @@ function renderRanking() {
   screenRankingElement.innerHTML = items;
 }
 
-function collides(piece, nextX, nextY, shape = piece.shape) {
+function collides(game, piece, nextX, nextY, shape = piece.shape) {
   for (let y = 0; y < shape.length; y += 1) {
     for (let x = 0; x < shape[y].length; x += 1) {
       if (!shape[y][x]) {
@@ -224,7 +229,7 @@ function collides(piece, nextX, nextY, shape = piece.shape) {
         return true;
       }
 
-      if (boardY >= 0 && board[boardY][boardX]) {
+      if (boardY >= 0 && game.board[boardY][boardX]) {
         return true;
       }
     }
@@ -233,43 +238,51 @@ function collides(piece, nextX, nextY, shape = piece.shape) {
   return false;
 }
 
+function forEachActiveGame(callback) {
+  games.forEach((game) => {
+    if (!game.gameOver) {
+      callback(game);
+    }
+  });
+}
+
 function movePiece(offsetX) {
-  if (gameOver || mode !== "playing") {
+  if (mode !== "playing") {
     return;
   }
 
-  moveActivePiece(offsetX);
+  forEachActiveGame((game) => moveActivePiece(game, offsetX));
 }
 
-function moveActivePiece(offsetX) {
-  const nextX = currentPiece.x + offsetX;
-  if (!collides(currentPiece, nextX, currentPiece.y)) {
-    currentPiece.x = nextX;
-    lastMoveWasRotation = false;
+function moveActivePiece(game, offsetX) {
+  const nextX = game.currentPiece.x + offsetX;
+  if (!collides(game, game.currentPiece, nextX, game.currentPiece.y)) {
+    game.currentPiece.x = nextX;
+    game.lastMoveWasRotation = false;
   }
 }
 
 function rotatePiece() {
-  if (gameOver || mode !== "playing") {
+  if (mode !== "playing") {
     return;
   }
 
-  rotateActivePiece();
+  forEachActiveGame(rotateActivePiece);
 }
 
-function rotateActivePiece() {
-  if (currentPiece.type === "O") {
+function rotateActivePiece(game) {
+  if (game.currentPiece.type === "O") {
     return;
   }
 
-  const rotated = rotateMatrix(currentPiece.shape);
+  const rotated = rotateMatrix(game.currentPiece.shape);
   const kicks = [0, -1, 1, -2, 2];
 
   for (const kick of kicks) {
-    if (!collides(currentPiece, currentPiece.x + kick, currentPiece.y, rotated)) {
-      currentPiece.shape = rotated;
-      currentPiece.x += kick;
-      lastMoveWasRotation = true;
+    if (!collides(game, game.currentPiece, game.currentPiece.x + kick, game.currentPiece.y, rotated)) {
+      game.currentPiece.shape = rotated;
+      game.currentPiece.x += kick;
+      game.lastMoveWasRotation = true;
       return;
     }
   }
@@ -280,72 +293,79 @@ function rotateMatrix(matrix) {
 }
 
 function softDrop() {
-  if (gameOver || mode !== "playing") {
+  if (mode !== "playing") {
     return;
   }
 
-  if (!collides(currentPiece, currentPiece.x, currentPiece.y + 1)) {
-    currentPiece.y += 1;
-    score += 1;
-    lastMoveWasRotation = false;
-    updateHighScore();
-    updateStats();
-    return;
-  }
+  forEachActiveGame((game) => {
+    if (!collides(game, game.currentPiece, game.currentPiece.x, game.currentPiece.y + 1)) {
+      game.currentPiece.y += 1;
+      score += 1;
+      game.lastMoveWasRotation = false;
+      return;
+    }
 
-  lockPiece();
+    lockPiece(game);
+  });
+
+  updateHighScore();
+  updateStats();
 }
 
 function hardDrop() {
-  if (gameOver || mode !== "playing") {
+  if (mode !== "playing") {
     return;
   }
 
-  let distance = 0;
-  while (!collides(currentPiece, currentPiece.x, currentPiece.y + 1)) {
-    currentPiece.y += 1;
-    distance += 1;
-  }
+  forEachActiveGame((game) => {
+    let distance = 0;
 
-  score += distance * 2;
-  lastMoveWasRotation = false;
+    while (!collides(game, game.currentPiece, game.currentPiece.x, game.currentPiece.y + 1)) {
+      game.currentPiece.y += 1;
+      distance += 1;
+    }
+
+    score += distance * 2;
+    game.lastMoveWasRotation = false;
+    lockPiece(game);
+  });
+
   updateHighScore();
   updateStats();
-  lockPiece();
 }
 
-function lockPiece() {
+function lockPiece(game) {
   const lockedPiece = {
-    ...currentPiece,
-    shape: currentPiece.shape
+    ...game.currentPiece,
+    shape: game.currentPiece.shape
   };
-  const wasTSpin = isTSpin(lockedPiece);
+  const wasTSpin = isTSpin(game, lockedPiece);
 
-  currentPiece.shape.forEach((row, y) => {
+  game.currentPiece.shape.forEach((row, y) => {
     row.forEach((cell, x) => {
       if (cell) {
-        const boardY = currentPiece.y + y;
-        const boardX = currentPiece.x + x;
+        const boardY = game.currentPiece.y + y;
+        const boardX = game.currentPiece.x + x;
 
         if (boardY >= 0) {
-          board[boardY][boardX] = currentPiece.color;
+          game.board[boardY][boardX] = game.currentPiece.color;
         }
       }
     });
   });
 
-  const cleared = clearLines();
+  const cleared = clearLines(game);
   applyScore(cleared, wasTSpin);
-  spawnPiece();
+  spawnPiece(game);
 }
 
-function clearLines() {
+function clearLines(game) {
   let cleared = 0;
 
   for (let y = ROWS - 1; y >= 0; y -= 1) {
-    if (board[y].every(Boolean)) {
-      board.splice(y, 1);
-      board.unshift(Array(COLS).fill(null));
+    if (game.board[y].every(Boolean)) {
+      game.board.splice(y, 1);
+      game.board.unshift(Array(COLS).fill(null));
       cleared += 1;
       y += 1;
     }
@@ -395,8 +415,8 @@ function applyScore(cleared, wasTSpin) {
   updateStats();
 }
 
-function isTSpin(piece) {
-  if (piece.type !== "T" || !lastMoveWasRotation) {
+function isTSpin(game, piece) {
+  if (piece.type !== "T" || !game.lastMoveWasRotation) {
     return false;
   }
 
@@ -410,7 +430,7 @@ function isTSpin(piece) {
   ];
 
   const blockedCorners = corners.filter(([x, y]) => {
-    return x < 0 || x >= COLS || y >= ROWS || (y >= 0 && board[y][x]);
+    return x < 0 || x >= COLS || y >= ROWS || (y >= 0 && game.board[y][x]);
   }).length;
 
   return blockedCorners >= 3;
@@ -435,14 +455,15 @@ function getDropInterval() {
   return Math.max(MIN_DROP_INTERVAL, BASE_DROP_INTERVAL - (level - 1) * 55);
 }
 
-function spawnPiece() {
-  currentPiece = nextPiece;
-  currentPiece.x = Math.floor((COLS - currentPiece.shape[0].length) / 2);
-  currentPiece.y = 0;
-  lastMoveWasRotation = false;
-  nextPiece = createPiece();
+function spawnPiece(game) {
+  game.currentPiece = game.nextPiece;
+  game.currentPiece.x = Math.floor((COLS - game.currentPiece.shape[0].length) / 2);
+  game.currentPiece.y = 0;
+  game.lastMoveWasRotation = false;
+  game.nextPiece = createPiece();
 
-  if (collides(currentPiece, currentPiece.x, currentPiece.y)) {
+  if (collides(game, game.currentPiece, game.currentPiece.x, game.currentPiece.y)) {
+    game.gameOver = true;
     finishGame();
   }
 }
@@ -453,14 +474,13 @@ function finishGame() {
     return;
   }
 
-  gameOver = true;
   saveScoreToRanking();
   setMode("gameOver");
 }
 
-function getGhostPiece() {
-  const ghost = { ...currentPiece, shape: currentPiece.shape };
-  while (!collides(ghost, ghost.x, ghost.y + 1)) {
+function getGhostPiece(game) {
+  const ghost = { ...game.currentPiece, shape: game.currentPiece.shape };
+  while (!collides(game, ghost, ghost.x, ghost.y + 1)) {
     ghost.y += 1;
   }
   return ghost;
@@ -473,16 +493,22 @@ function update(time = 0) {
   updateAttractLoop(time);
 
   if (mode === "playing" || mode === "demo") {
-    dropCounter += deltaTime;
-
     if (mode === "demo") {
       runDemo(deltaTime);
     }
 
-    if (dropCounter > getDropInterval()) {
-      gravityDrop();
-      dropCounter = 0;
-    }
+    games.forEach((game) => {
+      if (game.gameOver) {
+        return;
+      }
+
+      game.dropCounter += deltaTime;
+
+      if (game.dropCounter > getDropInterval()) {
+        gravityDrop(game);
+        game.dropCounter = 0;
+      }
+    });
   }
 
   draw();
@@ -511,51 +537,61 @@ function runDemo(deltaTime) {
   }
 
   demoStep = 0;
-  const target = Math.floor((COLS - currentPiece.shape[0].length) / 2 + Math.sin(performance.now() / 520) * 3);
+  games.forEach((game, index) => {
+    if (game.gameOver) {
+      return;
+    }
 
-  if (Math.random() < 0.18) {
-    rotateActivePiece();
-  }
+    const wave = Math.sin(performance.now() / (520 + index * 90));
+    const target = Math.floor((COLS - game.currentPiece.shape[0].length) / 2 + wave * 3);
 
-  if (currentPiece.x < target) {
-    moveActivePiece(1);
-  } else if (currentPiece.x > target) {
-    moveActivePiece(-1);
-  }
+    if (Math.random() < 0.18) {
+      rotateActivePiece(game);
+    }
+
+    if (game.currentPiece.x < target) {
+      moveActivePiece(game, 1);
+    } else if (game.currentPiece.x > target) {
+      moveActivePiece(game, -1);
+    }
+  });
 }
 
-function gravityDrop() {
-  if (!collides(currentPiece, currentPiece.x, currentPiece.y + 1)) {
-    currentPiece.y += 1;
-    lastMoveWasRotation = false;
+function gravityDrop(game) {
+  if (!collides(game, game.currentPiece, game.currentPiece.x, game.currentPiece.y + 1)) {
+    game.currentPiece.y += 1;
+    game.lastMoveWasRotation = false;
     return;
   }
 
-  lockPiece();
+  lockPiece(game);
 }
 
 function draw() {
-  boardContext.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
-  drawGrid(boardContext, COLS, ROWS, BLOCK);
-  drawBoard();
-
-  if (currentPiece) {
-    drawPiece(getGhostPiece(), boardContext, BLOCK, 0.22, true);
-    drawPiece(currentPiece, boardContext, BLOCK);
-  }
-
-  if (gameOver) {
-    drawGameOver();
-  }
-
-  drawNext();
+  games.forEach((game, index) => drawGame(game, boardContexts[index], boardCanvases[index]));
+  games.forEach((game, index) => drawNext(game, nextContexts[index], nextCanvases[index]));
 }
 
-function drawBoard() {
-  board.forEach((row, y) => {
+function drawGame(game, context, canvas) {
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid(context, COLS, ROWS, BLOCK);
+  drawBoard(game, context);
+
+  if (game.currentPiece) {
+    drawPiece(getGhostPiece(game), context, BLOCK, 0.22, true);
+    drawPiece(game.currentPiece, context, BLOCK);
+  }
+
+  if (mode === "gameOver" || game.gameOver) {
+    drawGameOver(context, canvas);
+  }
+}
+
+function drawBoard(game, context) {
+  game.board.forEach((row, y) => {
     row.forEach((color, x) => {
       if (color) {
-        drawBlock(boardContext, x, y, BLOCK, color);
+        drawBlock(context, x, y, BLOCK, color);
       }
     });
   });
@@ -624,32 +660,32 @@ function drawGrid(context, cols, rows, blockSize) {
   }
 }
 
-function drawNext() {
-  nextContext.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-  drawGrid(nextContext, 4, 4, 30);
+function drawNext(game, context, canvas) {
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid(context, 4, 4, 30);
 
-  if (!nextPiece) {
+  if (!game.nextPiece) {
     return;
   }
 
   const preview = {
-    ...nextPiece,
-    x: (4 - nextPiece.shape[0].length) / 2,
-    y: (4 - nextPiece.shape.length) / 2
+    ...game.nextPiece,
+    x: (4 - game.nextPiece.shape[0].length) / 2,
+    y: (4 - game.nextPiece.shape.length) / 2
   };
 
-  drawPiece(preview, nextContext, 30);
+  drawPiece(preview, context, 30);
 }
 
-function drawGameOver() {
-  boardContext.fillStyle = "rgba(9, 10, 13, 0.76)";
-  boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
-  boardContext.fillStyle = "#f7f4ea";
-  boardContext.font = "700 34px Arial, Helvetica, sans-serif";
-  boardContext.textAlign = "center";
-  boardContext.fillText("GAME OVER", boardCanvas.width / 2, boardCanvas.height / 2 - 12);
-  boardContext.font = "16px Arial, Helvetica, sans-serif";
-  boardContext.fillText("Retornando ao inicio", boardCanvas.width / 2, boardCanvas.height / 2 + 24);
+function drawGameOver(context, canvas) {
+  context.fillStyle = "rgba(9, 10, 13, 0.76)";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#f7f4ea";
+  context.font = "700 34px Arial, Helvetica, sans-serif";
+  context.textAlign = "center";
+  context.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 12);
+  context.font = "16px Arial, Helvetica, sans-serif";
+  context.fillText("Retornando ao inicio", canvas.width / 2, canvas.height / 2 + 24);
 }
 
 function startPlaying() {
@@ -681,11 +717,15 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "ArrowDown") {
     event.preventDefault();
     softDrop();
-    dropCounter = 0;
+    games.forEach((game) => {
+      game.dropCounter = 0;
+    });
   } else if (event.code === "Space") {
     event.preventDefault();
     hardDrop();
-    dropCounter = 0;
+    games.forEach((game) => {
+      game.dropCounter = 0;
+    });
   } else if (event.key.toLowerCase() === "r") {
     startPlaying();
   }
@@ -707,4 +747,4 @@ startButton.addEventListener("click", (event) => {
 resetGame();
 setMode("title");
 requestAnimationFrame(update);
-console.log("ETAPA 3 CONCLUÍDA — aguardando validação");
+console.log("ETAPA 4 CONCLUÍDA — aguardando validação");

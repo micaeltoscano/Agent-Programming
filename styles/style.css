@@ -21,7 +21,7 @@ body {
 }
 
 .game-shell {
-  width: min(92vw, 760px);
+  width: min(96vw, 1160px);
   display: grid;
   grid-template-columns: auto minmax(190px, 1fr);
   gap: 24px;
@@ -45,8 +45,14 @@ canvas {
   image-rendering: pixelated;
 }
 
-#board {
-  width: min(70vw, 300px);
+.boards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.board {
+  width: min(26vw, 250px);
   aspect-ratio: 1 / 2;
   height: auto;
   background: #090a0d;
@@ -194,6 +200,20 @@ kbd {
   background: #090a0d;
 }
 
+.next-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.next-grid canvas {
+  width: 100%;
+  max-width: 80px;
+  aspect-ratio: 1;
+  height: auto;
+  background: #090a0d;
+}
+
 @media (max-width: 640px) {
   body {
     place-items: start center;
@@ -207,6 +227,15 @@ kbd {
 
   .play-area {
     justify-self: center;
+    width: 100%;
+  }
+
+  .boards {
+    gap: 6px;
+  }
+
+  .board {
+    width: 100%;
   }
 
   .side-panel {

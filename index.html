@@ -9,7 +9,11 @@
   <body>
     <main class="game-shell" aria-label="Tetris Arcade">
       <section class="play-area">
-        <canvas id="board" width="300" height="600" aria-label="Campo de jogo"></canvas>
+        <div class="boards">
+          <canvas id="board-0" class="board" width="300" height="600" aria-label="Campo de jogo 1"></canvas>
+          <canvas id="board-1" class="board" width="300" height="600" aria-label="Campo de jogo 2"></canvas>
+          <canvas id="board-2" class="board" width="300" height="600" aria-label="Campo de jogo 3"></canvas>
+        </div>
         <div id="screen" class="screen">
           <h2 id="screen-title">Tetris Arcade</h2>
           <p id="screen-subtitle">Pressione qualquer tecla ou clique para jogar</p>
@@ -21,7 +25,7 @@
       <aside class="side-panel" aria-label="Informacoes do jogo">
         <div class="panel-block">
           <h1>Tetris Arcade</h1>
-          <p>Fase 3: tela de abertura</p>
+          <p>Fase 4: tres campos simultaneos</p>
         </div>
 
         <div class="panel-block stats">
@@ -51,8 +55,12 @@
         </div>
 
         <div class="panel-block">
-          <h2>Proxima</h2>
-          <canvas id="next" width="120" height="120" aria-label="Proxima peca"></canvas>
+          <h2>Proximas</h2>
+          <div class="next-grid">
+            <canvas id="next-0" width="120" height="120" aria-label="Proxima peca do campo 1"></canvas>
+            <canvas id="next-1" width="120" height="120" aria-label="Proxima peca do campo 2"></canvas>
+            <canvas id="next-2" width="120" height="120" aria-label="Proxima peca do campo 3"></canvas>
+          </div>
         </div>
 
         <div class="panel-block">
