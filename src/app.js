@@ -50,6 +50,7 @@ const roomStatusElement = document.getElementById("room-status");
 const botPanelElement = document.getElementById("bot-panel");
 const botStatusElement = document.getElementById("bot-status");
 const screenMenuButton = document.getElementById("screen-menu-button");
+const pauseButton = document.getElementById("pause-button");
 const rankingElement = document.getElementById("ranking");
 const screenRankingElement = document.getElementById("screen-ranking");
 const remoteScoreRow = document.getElementById("remote-score-row");
@@ -300,12 +301,30 @@ function updateModeLayout() {
   boardSetElement.classList.toggle("bot-mode", isBotMode);
   opponentPanelElement.hidden = !isMultiplayer && !isBotMode;
   botTwoPanelElement.hidden = !isBotMode;
+  pauseButton.hidden = mode !== "playing";
   remoteScoreRow.hidden = gameMode !== "multiplayer";
   botOneScoreRow.hidden = gameMode !== "bot";
   botTwoScoreRow.hidden = gameMode !== "bot";
   localLabelElement.textContent = gameMode === "multiplayer" ? playerLabel : (gameMode === "bot" ? "VOCÊ" : "Jogador Solo");
   opponentLabelElement.textContent = gameMode === "bot" ? "VILLACORTA 67" : (playerLabel === "Jogador 1" ? "Jogador 2" : "Jogador 1");
   botTwoLabelElement.textContent = "VILLACORTA 69";
+  updatePauseButton();
+}
+
+function setPaused(nextPaused) {
+  if (mode !== "playing" || gameOver) {
+    return;
+  }
+
+  paused = nextPaused;
+  updatePauseButton();
+  draw();
+}
+
+function updatePauseButton() {
+  pauseButton.textContent = paused ? "Retomar" : "Pausar";
+  pauseButton.setAttribute("aria-pressed", String(paused));
+  pauseButton.classList.toggle("is-paused", paused);
 }
 
 function loadRanking() {
@@ -1872,8 +1891,7 @@ document.addEventListener("keydown", (event) => {
     returnToMenu();
   } else if (event.key.toLowerCase() === "p") {
     event.preventDefault();
-    paused = !paused;
-    draw();
+    setPaused(!paused);
   } else if (paused) {
     event.preventDefault();
   } else if (event.key === "ArrowLeft") {
@@ -1907,6 +1925,11 @@ screenElement.addEventListener("click", () => {
 screenMenuButton.addEventListener("click", (event) => {
   event.stopPropagation();
   returnToMenu();
+});
+
+pauseButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setPaused(!paused);
 });
 
 document.querySelectorAll(".mode-panel .back-menu-button").forEach((button) => {
