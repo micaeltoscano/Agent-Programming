@@ -9,15 +9,42 @@
   <body>
     <main class="game-shell" aria-label="Tetris Arcade">
       <section class="play-area">
-        <div class="boards">
-          <canvas id="board-0" class="board" width="300" height="600" aria-label="Campo de jogo 1"></canvas>
-          <canvas id="board-1" class="board" width="300" height="600" aria-label="Campo de jogo 2"></canvas>
-          <canvas id="board-2" class="board" width="300" height="600" aria-label="Campo de jogo 3"></canvas>
+        <div class="board-set">
+          <div class="board-panel">
+            <h2 id="local-label">Jogador Solo</h2>
+            <canvas id="board" width="300" height="600" aria-label="Campo de jogo"></canvas>
+          </div>
+          <div id="opponent-panel" class="board-panel" hidden>
+            <h2 id="opponent-label">Jogador 2</h2>
+            <canvas id="opponent-board" width="300" height="600" aria-label="Campo adversario"></canvas>
+          </div>
+          <div id="bot-two-panel" class="board-panel" hidden>
+            <h2 id="bot-two-label">Villacorta 69</h2>
+            <canvas id="bot-two-board" width="300" height="600" aria-label="Campo Villacorta 69"></canvas>
+          </div>
         </div>
         <div id="screen" class="screen">
           <h2 id="screen-title">Tetris Arcade</h2>
           <p id="screen-subtitle">Pressione qualquer tecla ou clique para jogar</p>
-          <button id="start-button" type="button">Jogar</button>
+          <div id="mode-buttons" class="mode-buttons">
+            <button id="start-button" type="button">Jogador Solo</button>
+            <button id="multiplayer-button" class="mode-button" type="button">Multiplayer Online</button>
+            <button id="bot-button" class="mode-button" type="button">Contra Bot</button>
+          </div>
+          <div id="multiplayer-panel" class="mode-panel" hidden>
+            <button id="create-room-button" type="button">Criar Sala</button>
+            <div class="join-row">
+              <input id="room-code-input" type="text" maxlength="6" placeholder="Codigo">
+              <button id="join-room-button" type="button">Entrar</button>
+            </div>
+            <p id="room-status">Aguardando sala</p>
+          </div>
+          <div id="bot-panel" class="mode-panel" hidden>
+            <button class="difficulty-button" type="button" data-difficulty="facil">Facil</button>
+            <button class="difficulty-button" type="button" data-difficulty="medio">Medio</button>
+            <button class="difficulty-button" type="button" data-difficulty="dificil">Dificil</button>
+            <p id="bot-status">Competitivo completo na Fase 6</p>
+          </div>
           <ol id="screen-ranking" class="ranking"></ol>
         </div>
       </section>
@@ -25,7 +52,7 @@
       <aside class="side-panel" aria-label="Informacoes do jogo">
         <div class="panel-block">
           <h1>Tetris Arcade</h1>
-          <p>Fase 4: tres campos simultaneos</p>
+          <p>Fase 6: contra bot</p>
         </div>
 
         <div class="panel-block stats">
@@ -51,16 +78,24 @@
               <dt>Combo</dt>
               <dd id="combo">0</dd>
             </div>
+            <div id="remote-score-row" hidden>
+              <dt>Jogador 2</dt>
+              <dd id="remote-score">0</dd>
+            </div>
+            <div id="bot-one-score-row" hidden>
+              <dt>Villacorta 67</dt>
+              <dd id="bot-one-score">0</dd>
+            </div>
+            <div id="bot-two-score-row" hidden>
+              <dt>Villacorta 69</dt>
+              <dd id="bot-two-score">0</dd>
+            </div>
           </dl>
         </div>
 
         <div class="panel-block">
-          <h2>Proximas</h2>
-          <div class="next-grid">
-            <canvas id="next-0" width="120" height="120" aria-label="Proxima peca do campo 1"></canvas>
-            <canvas id="next-1" width="120" height="120" aria-label="Proxima peca do campo 2"></canvas>
-            <canvas id="next-2" width="120" height="120" aria-label="Proxima peca do campo 3"></canvas>
-          </div>
+          <h2>Proxima</h2>
+          <canvas id="next" width="120" height="120" aria-label="Proxima peca"></canvas>
         </div>
 
         <div class="panel-block">

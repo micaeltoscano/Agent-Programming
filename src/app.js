@@ -1,7 +1,6 @@
 const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
-const FIELD_COUNT = 3;
 const BASE_DROP_INTERVAL = 720;
 const MIN_DROP_INTERVAL = 80;
 const LINES_PER_LEVEL = 10;
@@ -14,11 +13,21 @@ const GAME_OVER_TIME = 5000;
 
 const LINE_POINTS = [0, 100, 300, 500, 800];
 const T_SPIN_POINTS = [400, 800, 1200, 1600];
+const BOMB_BLOCK_POINTS = 25;
 
-const boardCanvases = Array.from({ length: FIELD_COUNT }, (_, index) => document.getElementById(`board-${index}`));
-const boardContexts = boardCanvases.map((canvas) => canvas.getContext("2d"));
-const nextCanvases = Array.from({ length: FIELD_COUNT }, (_, index) => document.getElementById(`next-${index}`));
-const nextContexts = nextCanvases.map((canvas) => canvas.getContext("2d"));
+const boardCanvas = document.getElementById("board");
+const boardContext = boardCanvas.getContext("2d");
+const boardSetElement = document.querySelector(".board-set");
+const localLabelElement = document.getElementById("local-label");
+const opponentPanelElement = document.getElementById("opponent-panel");
+const opponentLabelElement = document.getElementById("opponent-label");
+const opponentCanvas = document.getElementById("opponent-board");
+const opponentContext = opponentCanvas.getContext("2d");
+const botTwoPanelElement = document.getElementById("bot-two-panel");
+const botTwoCanvas = document.getElementById("bot-two-board");
+const botTwoContext = botTwoCanvas.getContext("2d");
+const nextCanvas = document.getElementById("next");
+const nextContext = nextCanvas.getContext("2d");
 const scoreElement = document.getElementById("score");
 const highScoreElement = document.getElementById("high-score");
 const levelElement = document.getElementById("level");
@@ -28,8 +37,24 @@ const screenElement = document.getElementById("screen");
 const screenTitleElement = document.getElementById("screen-title");
 const screenSubtitleElement = document.getElementById("screen-subtitle");
 const startButton = document.getElementById("start-button");
+const multiplayerButton = document.getElementById("multiplayer-button");
+const botButton = document.getElementById("bot-button");
+const modeButtonsElement = document.getElementById("mode-buttons");
+const multiplayerPanelElement = document.getElementById("multiplayer-panel");
+const createRoomButton = document.getElementById("create-room-button");
+const joinRoomButton = document.getElementById("join-room-button");
+const roomCodeInput = document.getElementById("room-code-input");
+const roomStatusElement = document.getElementById("room-status");
+const botPanelElement = document.getElementById("bot-panel");
+const botStatusElement = document.getElementById("bot-status");
 const rankingElement = document.getElementById("ranking");
 const screenRankingElement = document.getElementById("screen-ranking");
+const remoteScoreRow = document.getElementById("remote-score-row");
+const remoteScoreElement = document.getElementById("remote-score");
+const botOneScoreRow = document.getElementById("bot-one-score-row");
+const botOneScoreElement = document.getElementById("bot-one-score");
+const botTwoScoreRow = document.getElementById("bot-two-score-row");
+const botTwoScoreElement = document.getElementById("bot-two-score");
 
 const COLORS = {
   I: "#35ada8",
@@ -81,10 +106,14 @@ const SHAPES = {
 
 const PIECES = Object.keys(SHAPES);
 
-let games = [];
+let board;
+let currentPiece;
+let nextPiece;
 let lastTime = 0;
+let dropCounter = 0;
 let mode = "title";
 let modeStartedAt = 0;
+let gameOver = false;
 let score = 0;
 let ranking = loadRanking();
 let highScore = Math.max(Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0, ranking[0] || 0);
@@ -92,8 +121,24 @@ let level = 1;
 let linesCleared = 0;
 let combo = -1;
 let backToBack = false;
+let lastMoveWasRotation = false;
 let demoStep = 0;
 let currentScoreSaved = false;
+let particles = [];
+let lineEffects = [];
+let lockEffects = [];
+let shakeTime = 0;
+let gameMode = "solo";
+let selectedBotDifficulty = "medio";
+let socket = null;
+let roomCode = "";
+let playerLabel = "Jogador Solo";
+let remoteState = null;
+let remoteGameOver = false;
+let multiplayerResult = "";
+let lastStateSync = 0;
+let botGames = [];
+let botFinalRanking = [];
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -118,36 +163,70 @@ function randomType() {
   return PIECES[Math.floor(Math.random() * PIECES.length)];
 }
 
-function createGame(index) {
-  const currentPiece = createPiece();
-
+function createBotGame(name, style) {
   return {
-    index,
+    name,
+    style,
     board: createBoard(),
-    currentPiece,
+    currentPiece: createPiece(),
     nextPiece: createPiece(),
     dropCounter: 0,
+    actionCounter: 0,
+    plan: null,
     gameOver: false,
-    lastMoveWasRotation: false
+    score: 0,
+    level: 1,
+    lines: 0,
+    combo: -1,
+    backToBack: false,
+    lastMoveWasRotation: false,
+    particles: [],
+    lineEffects: [],
+    lockEffects: [],
+    shakeTime: 0
   };
 }
 
 function resetGame() {
-  games = Array.from({ length: FIELD_COUNT }, (_, index) => createGame(index));
+  board = createBoard();
+  currentPiece = createPiece();
+  nextPiece = createPiece();
   lastTime = 0;
+  dropCounter = 0;
+  gameOver = false;
   score = 0;
   level = 1;
   linesCleared = 0;
   combo = -1;
   backToBack = false;
+  lastMoveWasRotation = false;
   demoStep = 0;
   currentScoreSaved = false;
+  particles = [];
+  lineEffects = [];
+  lockEffects = [];
+  shakeTime = 0;
+  remoteState = null;
+  remoteGameOver = false;
+  multiplayerResult = "";
+  lastStateSync = 0;
+  if (gameMode === "bot") {
+    botGames = [createBotGame("VILLACORTA 67", "balanced"), createBotGame("VILLACORTA 69", "clean")];
+    botFinalRanking = [];
+  } else {
+    botGames = [];
+  }
   updateStats();
 }
 
 function setMode(nextMode) {
   mode = nextMode;
   modeStartedAt = performance.now();
+
+  if (mode === "title") {
+    gameMode = "solo";
+    playerLabel = "Jogador Solo";
+  }
 
   if (mode === "playing" || mode === "demo") {
     resetGame();
@@ -158,7 +237,8 @@ function setMode(nextMode) {
 }
 
 function updateScreen() {
-  renderRanking();
+  renderRanking(mode === "gameOver" && gameMode === "bot" ? botFinalRanking : ranking);
+  updateModeLayout();
 
   if (mode === "playing") {
     screenElement.hidden = true;
@@ -166,16 +246,18 @@ function updateScreen() {
   }
 
   screenElement.hidden = false;
-  startButton.hidden = mode === "demo" || mode === "gameOver";
+  modeButtonsElement.hidden = mode !== "title";
+  multiplayerPanelElement.hidden = mode !== "multiplayerLobby";
+  botPanelElement.hidden = mode !== "botDifficulty";
 
   if (mode === "title") {
     screenTitleElement.textContent = "Tetris Arcade";
-    screenSubtitleElement.textContent = "Pressione qualquer tecla ou clique para jogar";
-    startButton.textContent = "Jogar";
+    screenSubtitleElement.textContent = "Escolha um modo ou pressione qualquer tecla para jogar solo";
+    startButton.textContent = "Jogador Solo";
     screenRankingElement.hidden = true;
   } else if (mode === "demo") {
     screenTitleElement.textContent = "Demo";
-    screenSubtitleElement.textContent = "Tres campos jogando em paralelo";
+    screenSubtitleElement.textContent = "Modo de demonstracao";
     screenRankingElement.hidden = true;
   } else if (mode === "scores") {
     screenTitleElement.textContent = "High Scores";
@@ -183,9 +265,31 @@ function updateScreen() {
     screenRankingElement.hidden = false;
   } else if (mode === "gameOver") {
     screenTitleElement.textContent = "GAME OVER";
-    screenSubtitleElement.textContent = `Pontuacao final: ${score}`;
+    screenSubtitleElement.textContent = multiplayerResult || `Pontuacao final: ${score}`;
     screenRankingElement.hidden = false;
+  } else if (mode === "multiplayerLobby") {
+    screenTitleElement.textContent = "Multiplayer Online";
+    screenSubtitleElement.textContent = "Crie uma sala ou entre com um codigo";
+    screenRankingElement.hidden = true;
+  } else if (mode === "botDifficulty") {
+    screenTitleElement.textContent = "Contra Bot";
+    screenSubtitleElement.textContent = "Escolha a dificuldade para a Fase 6";
+    screenRankingElement.hidden = true;
   }
+}
+
+function updateModeLayout() {
+  const isMultiplayer = gameMode === "multiplayer";
+  const isBotMode = gameMode === "bot";
+  boardSetElement.classList.toggle("multiplayer", isMultiplayer);
+  boardSetElement.classList.toggle("bot-mode", isBotMode);
+  opponentPanelElement.hidden = !isMultiplayer && !isBotMode;
+  botTwoPanelElement.hidden = !isBotMode;
+  remoteScoreRow.hidden = !isMultiplayer;
+  botOneScoreRow.hidden = !isBotMode;
+  botTwoScoreRow.hidden = !isBotMode;
+  localLabelElement.textContent = isMultiplayer ? playerLabel : (isBotMode ? "VOCE" : "Jogador Solo");
+  opponentLabelElement.textContent = isBotMode ? "VILLACORTA 67" : (playerLabel === "Jogador 1" ? "Jogador 2" : "Jogador 1");
 }
 
 function loadRanking() {
@@ -209,13 +313,19 @@ function saveScoreToRanking() {
   renderRanking();
 }
 
-function renderRanking() {
-  const items = ranking.map((value) => `<li>${value}</li>`).join("");
-  rankingElement.innerHTML = items;
-  screenRankingElement.innerHTML = items;
+function renderRanking(items = ranking) {
+  const renderedItems = items.map((value, index) => {
+    if (typeof value === "number") {
+      return `<li>${value}</li>`;
+    }
+
+    return `<li>${index + 1}. ${value.name} - ${value.score} pts, ${value.lines} linhas, nivel ${value.level}</li>`;
+  }).join("");
+  rankingElement.innerHTML = renderedItems;
+  screenRankingElement.innerHTML = renderedItems;
 }
 
-function collides(game, piece, nextX, nextY, shape = piece.shape) {
+function collides(piece, nextX, nextY, shape = piece.shape) {
   for (let y = 0; y < shape.length; y += 1) {
     for (let x = 0; x < shape[y].length; x += 1) {
       if (!shape[y][x]) {
@@ -229,7 +339,7 @@ function collides(game, piece, nextX, nextY, shape = piece.shape) {
         return true;
       }
 
-      if (boardY >= 0 && game.board[boardY][boardX]) {
+      if (boardY >= 0 && board[boardY][boardX]) {
         return true;
       }
     }
@@ -238,51 +348,43 @@ function collides(game, piece, nextX, nextY, shape = piece.shape) {
   return false;
 }
 
-function forEachActiveGame(callback) {
-  games.forEach((game) => {
-    if (!game.gameOver) {
-      callback(game);
-    }
-  });
-}
-
 function movePiece(offsetX) {
-  if (mode !== "playing") {
+  if (gameOver || mode !== "playing") {
     return;
   }
 
-  forEachActiveGame((game) => moveActivePiece(game, offsetX));
+  moveActivePiece(offsetX);
 }
 
-function moveActivePiece(game, offsetX) {
-  const nextX = game.currentPiece.x + offsetX;
-  if (!collides(game, game.currentPiece, nextX, game.currentPiece.y)) {
-    game.currentPiece.x = nextX;
-    game.lastMoveWasRotation = false;
+function moveActivePiece(offsetX) {
+  const nextX = currentPiece.x + offsetX;
+  if (!collides(currentPiece, nextX, currentPiece.y)) {
+    currentPiece.x = nextX;
+    lastMoveWasRotation = false;
   }
 }
 
 function rotatePiece() {
-  if (mode !== "playing") {
+  if (gameOver || mode !== "playing") {
     return;
   }
 
-  forEachActiveGame(rotateActivePiece);
+  rotateActivePiece();
 }
 
-function rotateActivePiece(game) {
-  if (game.currentPiece.type === "O") {
+function rotateActivePiece() {
+  if (currentPiece.type === "O") {
     return;
   }
 
-  const rotated = rotateMatrix(game.currentPiece.shape);
+  const rotated = rotateMatrix(currentPiece.shape);
   const kicks = [0, -1, 1, -2, 2];
 
   for (const kick of kicks) {
-    if (!collides(game, game.currentPiece, game.currentPiece.x + kick, game.currentPiece.y, rotated)) {
-      game.currentPiece.shape = rotated;
-      game.currentPiece.x += kick;
-      game.lastMoveWasRotation = true;
+    if (!collides(currentPiece, currentPiece.x + kick, currentPiece.y, rotated)) {
+      currentPiece.shape = rotated;
+      currentPiece.x += kick;
+      lastMoveWasRotation = true;
       return;
     }
   }
@@ -293,85 +395,137 @@ function rotateMatrix(matrix) {
 }
 
 function softDrop() {
-  if (mode !== "playing") {
+  if (gameOver || mode !== "playing") {
     return;
   }
 
-  forEachActiveGame((game) => {
-    if (!collides(game, game.currentPiece, game.currentPiece.x, game.currentPiece.y + 1)) {
-      game.currentPiece.y += 1;
-      score += 1;
-      game.lastMoveWasRotation = false;
-      return;
-    }
+  if (!collides(currentPiece, currentPiece.x, currentPiece.y + 1)) {
+    currentPiece.y += 1;
+    score += 1;
+    lastMoveWasRotation = false;
+    updateHighScore();
+    updateStats();
+    return;
+  }
 
-    lockPiece(game);
-  });
-
-  updateHighScore();
-  updateStats();
+  lockPiece();
 }
 
 function hardDrop() {
-  if (mode !== "playing") {
+  if (gameOver || mode !== "playing") {
     return;
   }
 
-  forEachActiveGame((game) => {
-    let distance = 0;
+  let distance = 0;
+  while (!collides(currentPiece, currentPiece.x, currentPiece.y + 1)) {
+    currentPiece.y += 1;
+    distance += 1;
+  }
 
-    while (!collides(game, game.currentPiece, game.currentPiece.x, game.currentPiece.y + 1)) {
-      game.currentPiece.y += 1;
-      distance += 1;
-    }
-
-    score += distance * 2;
-    game.lastMoveWasRotation = false;
-    lockPiece(game);
-  });
-
+  score += distance * 2;
+  lastMoveWasRotation = false;
   updateHighScore();
   updateStats();
+  lockPiece();
 }
 
-function lockPiece(game) {
+function lockPiece() {
   const lockedPiece = {
-    ...game.currentPiece,
-    shape: game.currentPiece.shape
+    ...currentPiece,
+    shape: currentPiece.shape
   };
-  const wasTSpin = isTSpin(game, lockedPiece);
+  const wasTSpin = isTSpin(lockedPiece);
+  const lockedCells = getPieceCells(lockedPiece);
 
-  game.currentPiece.shape.forEach((row, y) => {
+  currentPiece.shape.forEach((row, y) => {
     row.forEach((cell, x) => {
       if (cell) {
-        const boardY = game.currentPiece.y + y;
-        const boardX = game.currentPiece.x + x;
+        const boardY = currentPiece.y + y;
+        const boardX = currentPiece.x + x;
 
         if (boardY >= 0) {
-          game.board[boardY][boardX] = game.currentPiece.color;
+          board[boardY][boardX] = currentPiece.color;
         }
       }
     });
   });
 
-  const cleared = clearLines(game);
+  addLockEffect(lockedCells, currentPiece.color);
+  const cleared = clearLines();
+  let bombDestroyed = 0;
+
+  if (cleared > 0) {
+    bombDestroyed = activateLineBomb(lockedCells);
+    if (bombDestroyed > 0) {
+      score += bombDestroyed * BOMB_BLOCK_POINTS;
+    }
+  }
+
   applyScore(cleared, wasTSpin);
-  spawnPiece(game);
+  spawnPiece();
 }
 
-function clearLines(game) {
+function getPieceCells(piece) {
+  const cells = [];
+
+  piece.shape.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      if (cell) {
+        cells.push({
+          x: piece.x + x,
+          y: piece.y + y
+        });
+      }
+    });
+  });
+
+  return cells;
+}
+
+function clearLines() {
   let cleared = 0;
 
   for (let y = ROWS - 1; y >= 0; y -= 1) {
-    if (game.board[y].every(Boolean)) {
-      game.board.splice(y, 1);
-      game.board.unshift(Array(COLS).fill(null));
+    if (board[y].every(Boolean)) {
+      addLineEffect(y);
+      board.splice(y, 1);
+      board.unshift(Array(COLS).fill(null));
       cleared += 1;
       y += 1;
     }
   }
 
   return cleared;
+}
+
+function activateLineBomb(lockedCells) {
+  const targets = new Map();
+
+  lockedCells.forEach((cell) => {
+    for (let y = cell.y - 1; y <= cell.y + 1; y += 1) {
+      for (let x = cell.x - 1; x <= cell.x + 1; x += 1) {
+        if (x >= 0 && x < COLS && y >= 0 && y < ROWS) {
+          targets.set(`${x},${y}`, { x, y });
+        }
+      }
+    }
+  });
+
+  let destroyed = 0;
+
+  targets.forEach(({ x, y }) => {
+    if (board[y][x]) {
+      board[y][x] = null;
+      destroyed += 1;
+      addExplosion(x, y);
+    }
+  });
+
+  if (destroyed > 0) {
+    shakeTime = 220;
+  }
+
+  return destroyed;
 }
 
 function applyScore(cleared, wasTSpin) {
@@ -398,6 +552,7 @@ function applyScore(cleared, wasTSpin) {
 
   if (cleared > 0 && combo > 0) {
     points += combo * 50 * level;
+    addComboEffect();
   }
 
   if (difficultClear && backToBack) {
@@ -415,8 +570,8 @@ function applyScore(cleared, wasTSpin) {
   updateStats();
 }
 
-function isTSpin(game, piece) {
-  if (piece.type !== "T" || !game.lastMoveWasRotation) {
+function isTSpin(piece) {
+  if (piece.type !== "T" || !lastMoveWasRotation) {
     return false;
   }
 
@@ -430,7 +585,7 @@ function isTSpin(game, piece) {
   ];
 
   const blockedCorners = corners.filter(([x, y]) => {
-    return x < 0 || x >= COLS || y >= ROWS || (y >= 0 && game.board[y][x]);
+    return x < 0 || x >= COLS || y >= ROWS || (y >= 0 && board[y][x]);
   }).length;
 
   return blockedCorners >= 3;
@@ -449,21 +604,23 @@ function updateStats() {
   levelElement.textContent = String(level);
   linesElement.textContent = String(linesCleared);
   comboElement.textContent = combo > 0 ? String(combo) : "0";
+  remoteScoreElement.textContent = remoteState ? String(remoteState.score) : "0";
+  botOneScoreElement.textContent = botGames[0] ? String(botGames[0].score) : "0";
+  botTwoScoreElement.textContent = botGames[1] ? String(botGames[1].score) : "0";
 }
 
 function getDropInterval() {
   return Math.max(MIN_DROP_INTERVAL, BASE_DROP_INTERVAL - (level - 1) * 55);
 }
 
-function spawnPiece(game) {
-  game.currentPiece = game.nextPiece;
-  game.currentPiece.x = Math.floor((COLS - game.currentPiece.shape[0].length) / 2);
-  game.currentPiece.y = 0;
-  game.lastMoveWasRotation = false;
-  game.nextPiece = createPiece();
+function spawnPiece() {
+  currentPiece = nextPiece;
+  currentPiece.x = Math.floor((COLS - currentPiece.shape[0].length) / 2);
+  currentPiece.y = 0;
+  lastMoveWasRotation = false;
+  nextPiece = createPiece();
 
-  if (collides(game, game.currentPiece, game.currentPiece.x, game.currentPiece.y)) {
-    game.gameOver = true;
+  if (collides(currentPiece, currentPiece.x, currentPiece.y)) {
     finishGame();
   }
 }
@@ -474,13 +631,31 @@ function finishGame() {
     return;
   }
 
+  gameOver = true;
+  sendMultiplayerState();
+
+  if (gameMode === "bot") {
+    finishBotMatchIfNeeded();
+    return;
+  }
+
+  if (gameMode === "multiplayer") {
+    if (remoteGameOver) {
+      finishMultiplayerByScore();
+    } else {
+      multiplayerResult = "Aguardando o outro jogador terminar";
+      updateScreen();
+    }
+    return;
+  }
+
   saveScoreToRanking();
   setMode("gameOver");
 }
 
-function getGhostPiece(game) {
-  const ghost = { ...game.currentPiece, shape: game.currentPiece.shape };
-  while (!collides(game, ghost, ghost.x, ghost.y + 1)) {
+function getGhostPiece() {
+  const ghost = { ...currentPiece, shape: currentPiece.shape };
+  while (!collides(ghost, ghost.x, ghost.y + 1)) {
     ghost.y += 1;
   }
   return ghost;
@@ -489,26 +664,30 @@ function getGhostPiece(game) {
 function update(time = 0) {
   const deltaTime = time - lastTime;
   lastTime = time;
+  updateEffects(deltaTime);
 
   updateAttractLoop(time);
 
   if (mode === "playing" || mode === "demo") {
+    dropCounter += deltaTime;
+
     if (mode === "demo") {
       runDemo(deltaTime);
     }
 
-    games.forEach((game) => {
-      if (game.gameOver) {
-        return;
-      }
+    if (dropCounter > getDropInterval()) {
+      gravityDrop();
+      dropCounter = 0;
+    }
 
-      game.dropCounter += deltaTime;
+    if (gameMode === "multiplayer" && mode === "playing" && time - lastStateSync > 180) {
+      sendMultiplayerState();
+      lastStateSync = time;
+    }
 
-      if (game.dropCounter > getDropInterval()) {
-        gravityDrop(game);
-        game.dropCounter = 0;
-      }
-    });
+    if (gameMode === "bot" && mode === "playing") {
+      updateBotGames(deltaTime);
+    }
   }
 
   draw();
@@ -537,61 +716,607 @@ function runDemo(deltaTime) {
   }
 
   demoStep = 0;
-  games.forEach((game, index) => {
+  const target = Math.floor((COLS - currentPiece.shape[0].length) / 2 + Math.sin(performance.now() / 520) * 3);
+
+  if (Math.random() < 0.18) {
+    rotateActivePiece();
+  }
+
+  if (currentPiece.x < target) {
+    moveActivePiece(1);
+  } else if (currentPiece.x > target) {
+    moveActivePiece(-1);
+  }
+}
+
+function gravityDrop() {
+  if (!collides(currentPiece, currentPiece.x, currentPiece.y + 1)) {
+    currentPiece.y += 1;
+    lastMoveWasRotation = false;
+    return;
+  }
+
+  lockPiece();
+}
+
+function draw() {
+  boardContext.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
+  boardContext.save();
+
+  if (shakeTime > 0) {
+    boardContext.translate((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5);
+  }
+
+  drawGrid(boardContext, COLS, ROWS, BLOCK);
+  drawBoard();
+
+  if (currentPiece) {
+    drawPiece(getGhostPiece(), boardContext, BLOCK, 0.22, true);
+    drawPiece(currentPiece, boardContext, BLOCK);
+  }
+
+  if (gameOver) {
+    drawGameOver();
+  }
+
+  drawEffects();
+  boardContext.restore();
+
+  drawNext();
+
+  if (gameMode === "multiplayer") {
+    drawOpponent();
+  } else if (gameMode === "bot") {
+    drawBotGame(botGames[0], opponentContext, opponentCanvas);
+    drawBotGame(botGames[1], botTwoContext, botTwoCanvas);
+  }
+}
+
+function drawOpponent() {
+  opponentContext.clearRect(0, 0, opponentCanvas.width, opponentCanvas.height);
+  drawGrid(opponentContext, COLS, ROWS, BLOCK);
+
+  if (!remoteState) {
+    opponentContext.fillStyle = "rgba(247, 244, 234, 0.72)";
+    opponentContext.font = "16px Arial, Helvetica, sans-serif";
+    opponentContext.textAlign = "center";
+    opponentContext.fillText("Aguardando jogador", opponentCanvas.width / 2, opponentCanvas.height / 2);
+    return;
+  }
+
+  remoteState.board.forEach((row, y) => {
+    row.forEach((color, x) => {
+      if (color) {
+        drawBlock(opponentContext, x, y, BLOCK, color);
+      }
+    });
+  });
+
+  if (remoteState.currentPiece) {
+    drawPiece(remoteState.currentPiece, opponentContext, BLOCK);
+  }
+
+  if (remoteState.gameOver) {
+    drawRemoteGameOver();
+  }
+}
+
+function drawRemoteGameOver() {
+  opponentContext.fillStyle = "rgba(9, 10, 13, 0.76)";
+  opponentContext.fillRect(0, 0, opponentCanvas.width, opponentCanvas.height);
+  opponentContext.fillStyle = "#f7f4ea";
+  opponentContext.font = "700 30px Arial, Helvetica, sans-serif";
+  opponentContext.textAlign = "center";
+  opponentContext.fillText("GAME OVER", opponentCanvas.width / 2, opponentCanvas.height / 2);
+}
+
+function updateBotGames(deltaTime) {
+  const settings = getBotDifficultySettings();
+
+  botGames.forEach((game) => {
     if (game.gameOver) {
       return;
     }
 
-    const wave = Math.sin(performance.now() / (520 + index * 90));
-    const target = Math.floor((COLS - game.currentPiece.shape[0].length) / 2 + wave * 3);
+    updateBotEffects(game, deltaTime);
+    game.actionCounter += deltaTime;
+    game.dropCounter += deltaTime;
 
-    if (Math.random() < 0.18) {
-      rotateActivePiece(game);
+    if (game.actionCounter >= settings.actionDelay) {
+      game.actionCounter = 0;
+      driveBot(game, settings);
     }
 
-    if (game.currentPiece.x < target) {
-      moveActivePiece(game, 1);
-    } else if (game.currentPiece.x > target) {
-      moveActivePiece(game, -1);
+    if (game.dropCounter > getBotDropInterval(game)) {
+      botGravityDrop(game);
+      game.dropCounter = 0;
     }
   });
 }
 
-function gravityDrop(game) {
-  if (!collides(game, game.currentPiece, game.currentPiece.x, game.currentPiece.y + 1)) {
+function getBotDifficultySettings() {
+  const difficulty = selectedBotDifficulty || localStorage.getItem("tetris-bot-difficulty") || "medio";
+
+  if (difficulty === "facil") {
+    return { actionDelay: 260, mistakeChance: 0.35, hardDropChance: 0.35, weights: { holes: 28, height: 5, bump: 4, clear: 75 } };
+  }
+
+  if (difficulty === "dificil") {
+    return { actionDelay: 70, mistakeChance: 0.03, hardDropChance: 0.95, weights: { holes: 70, height: 11, bump: 10, clear: 150 } };
+  }
+
+  return { actionDelay: 130, mistakeChance: 0.12, hardDropChance: 0.7, weights: { holes: 48, height: 8, bump: 7, clear: 110 } };
+}
+
+function driveBot(game, settings) {
+  if (!game.plan) {
+    game.plan = chooseBotPlan(game, settings);
+  }
+
+  if (!game.plan) {
+    botGravityDrop(game);
+    return;
+  }
+
+  if (game.plan.rotations > 0) {
+    botRotate(game);
+    game.plan.rotations -= 1;
+    return;
+  }
+
+  if (game.currentPiece.x < game.plan.x) {
+    botMove(game, 1);
+    return;
+  }
+
+  if (game.currentPiece.x > game.plan.x) {
+    botMove(game, -1);
+    return;
+  }
+
+  if (Math.random() < settings.hardDropChance) {
+    botHardDrop(game);
+  } else {
+    botGravityDrop(game);
+  }
+}
+
+function chooseBotPlan(game, settings) {
+  let best = null;
+  const rotations = getRotations(game.currentPiece);
+
+  rotations.forEach(({ rotation, shape }) => {
+    for (let x = -2; x < COLS; x += 1) {
+      const piece = { ...game.currentPiece, shape, x, y: 0 };
+
+      if (botCollides(game, piece, piece.x, piece.y, shape)) {
+        continue;
+      }
+
+      while (!botCollides(game, piece, piece.x, piece.y + 1, shape)) {
+        piece.y += 1;
+      }
+
+      const boardAfter = simulateBotLock(game.board, piece, shape);
+      const metrics = analyzeBotBoard(boardAfter);
+      const scoreValue = (
+        metrics.cleared * settings.weights.clear
+        - metrics.holes * settings.weights.holes
+        - metrics.aggregateHeight * settings.weights.height
+        - metrics.bumpiness * settings.weights.bump
+        - metrics.maxHeight * 12
+      );
+
+      if (!best || scoreValue > best.score) {
+        best = { score: scoreValue, x, rotations: rotation };
+      }
+    }
+  });
+
+  if (best && Math.random() < settings.mistakeChance) {
+    best.x = Math.max(0, Math.min(COLS - 1, best.x + (Math.random() < 0.5 ? -1 : 1)));
+  }
+
+  return best;
+}
+
+function getRotations(piece) {
+  const rotations = [];
+  let shape = cloneMatrix(piece.shape);
+
+  for (let rotation = 0; rotation < 4; rotation += 1) {
+    const key = JSON.stringify(shape);
+
+    if (!rotations.some((item) => item.key === key)) {
+      rotations.push({ rotation, shape: cloneMatrix(shape), key });
+    }
+
+    shape = rotateMatrix(shape);
+  }
+
+  return rotations;
+}
+
+function botCollides(game, piece, nextX, nextY, shape = piece.shape) {
+  for (let y = 0; y < shape.length; y += 1) {
+    for (let x = 0; x < shape[y].length; x += 1) {
+      if (!shape[y][x]) {
+        continue;
+      }
+
+      const boardX = nextX + x;
+      const boardY = nextY + y;
+
+      if (boardX < 0 || boardX >= COLS || boardY >= ROWS) {
+        return true;
+      }
+
+      if (boardY >= 0 && game.board[boardY][boardX]) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function botMove(game, offsetX) {
+  const nextX = game.currentPiece.x + offsetX;
+
+  if (!botCollides(game, game.currentPiece, nextX, game.currentPiece.y)) {
+    game.currentPiece.x = nextX;
+    game.lastMoveWasRotation = false;
+  }
+}
+
+function botRotate(game) {
+  if (game.currentPiece.type === "O") {
+    return;
+  }
+
+  const rotated = rotateMatrix(game.currentPiece.shape);
+  const kicks = [0, -1, 1, -2, 2];
+
+  for (const kick of kicks) {
+    if (!botCollides(game, game.currentPiece, game.currentPiece.x + kick, game.currentPiece.y, rotated)) {
+      game.currentPiece.shape = rotated;
+      game.currentPiece.x += kick;
+      game.lastMoveWasRotation = true;
+      return;
+    }
+  }
+}
+
+function botGravityDrop(game) {
+  if (!botCollides(game, game.currentPiece, game.currentPiece.x, game.currentPiece.y + 1)) {
     game.currentPiece.y += 1;
     game.lastMoveWasRotation = false;
     return;
   }
 
-  lockPiece(game);
+  botLockPiece(game);
 }
 
-function draw() {
-  games.forEach((game, index) => drawGame(game, boardContexts[index], boardCanvases[index]));
-  games.forEach((game, index) => drawNext(game, nextContexts[index], nextCanvases[index]));
+function botHardDrop(game) {
+  let distance = 0;
+
+  while (!botCollides(game, game.currentPiece, game.currentPiece.x, game.currentPiece.y + 1)) {
+    game.currentPiece.y += 1;
+    distance += 1;
+  }
+
+  game.score += distance * 2;
+  botLockPiece(game);
 }
 
-function drawGame(game, context, canvas) {
+function botLockPiece(game) {
+  const lockedPiece = { ...game.currentPiece, shape: game.currentPiece.shape };
+  const lockedCells = getBotPieceCells(lockedPiece);
+
+  game.currentPiece.shape.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      if (cell) {
+        const boardY = game.currentPiece.y + y;
+        const boardX = game.currentPiece.x + x;
+
+        if (boardY >= 0) {
+          game.board[boardY][boardX] = game.currentPiece.color;
+        }
+      }
+    });
+  });
+
+  addBotLockEffect(game, lockedCells, game.currentPiece.color);
+  const cleared = botClearLines(game);
+
+  if (cleared > 0) {
+    const destroyed = botActivateLineBomb(game, lockedCells);
+    game.score += destroyed * BOMB_BLOCK_POINTS;
+  }
+
+  botApplyScore(game, cleared);
+  botSpawnPiece(game);
+}
+
+function getBotPieceCells(piece) {
+  const cells = [];
+
+  piece.shape.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      if (cell) {
+        cells.push({ x: piece.x + x, y: piece.y + y });
+      }
+    });
+  });
+
+  return cells;
+}
+
+function botClearLines(game) {
+  let cleared = 0;
+
+  for (let y = ROWS - 1; y >= 0; y -= 1) {
+    if (game.board[y].every(Boolean)) {
+      addBotLineEffect(game, y);
+      game.board.splice(y, 1);
+      game.board.unshift(Array(COLS).fill(null));
+      cleared += 1;
+      y += 1;
+    }
+  }
+
+  return cleared;
+}
+
+function botActivateLineBomb(game, lockedCells) {
+  const targets = new Map();
+
+  lockedCells.forEach((cell) => {
+    for (let y = cell.y - 1; y <= cell.y + 1; y += 1) {
+      for (let x = cell.x - 1; x <= cell.x + 1; x += 1) {
+        if (x >= 0 && x < COLS && y >= 0 && y < ROWS) {
+          targets.set(`${x},${y}`, { x, y });
+        }
+      }
+    }
+  });
+
+  let destroyed = 0;
+
+  targets.forEach(({ x, y }) => {
+    if (game.board[y][x]) {
+      game.board[y][x] = null;
+      destroyed += 1;
+      addBotExplosion(game, x, y);
+    }
+  });
+
+  if (destroyed > 0) {
+    game.shakeTime = 220;
+  }
+
+  return destroyed;
+}
+
+function botApplyScore(game, cleared) {
+  if (cleared > 0) {
+    game.lines += cleared;
+    game.level = Math.floor(game.lines / LINES_PER_LEVEL) + 1;
+    game.combo += 1;
+    game.score += LINE_POINTS[cleared] * game.level;
+  } else {
+    game.combo = -1;
+  }
+
+  if (cleared > 0 && game.combo > 0) {
+    game.score += game.combo * 50 * game.level;
+  }
+
+  updateStats();
+}
+
+function botSpawnPiece(game) {
+  game.currentPiece = game.nextPiece;
+  game.currentPiece.x = Math.floor((COLS - game.currentPiece.shape[0].length) / 2);
+  game.currentPiece.y = 0;
+  game.nextPiece = createPiece();
+  game.plan = null;
+
+  if (botCollides(game, game.currentPiece, game.currentPiece.x, game.currentPiece.y)) {
+    game.gameOver = true;
+    finishBotMatchIfNeeded();
+  }
+}
+
+function getBotDropInterval(game) {
+  return Math.max(MIN_DROP_INTERVAL, BASE_DROP_INTERVAL - (game.level - 1) * 55);
+}
+
+function finishBotMatchIfNeeded() {
+  if (!gameOver || !botGames.every((game) => game.gameOver)) {
+    updateStats();
+    return;
+  }
+
+  botFinalRanking = [
+    { name: "VOCE", score, lines: linesCleared, level },
+    ...botGames.map((game) => ({ name: game.name, score: game.score, lines: game.lines, level: game.level }))
+  ].sort((a, b) => b.score - a.score || b.lines - a.lines || b.level - a.level);
+
+  multiplayerResult = "Ranking final contra bots";
+  setMode("gameOver");
+}
+
+function simulateBotLock(boardState, piece, shape) {
+  const copy = boardState.map((row) => [...row]);
+
+  shape.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      if (cell) {
+        const boardY = piece.y + y;
+        const boardX = piece.x + x;
+
+        if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
+          copy[boardY][boardX] = piece.color;
+        }
+      }
+    });
+  });
+
+  return copy.filter((row) => !row.every(Boolean));
+}
+
+function analyzeBotBoard(boardState) {
+  const padded = [
+    ...Array.from({ length: ROWS - boardState.length }, () => Array(COLS).fill(null)),
+    ...boardState
+  ];
+  const heights = Array(COLS).fill(0);
+  let holes = 0;
+
+  for (let x = 0; x < COLS; x += 1) {
+    let foundBlock = false;
+
+    for (let y = 0; y < ROWS; y += 1) {
+      if (padded[y][x]) {
+        if (!foundBlock) {
+          heights[x] = ROWS - y;
+        }
+        foundBlock = true;
+      } else if (foundBlock) {
+        holes += 1;
+      }
+    }
+  }
+
+  return {
+    cleared: ROWS - boardState.length,
+    holes,
+    aggregateHeight: heights.reduce((sum, value) => sum + value, 0),
+    maxHeight: Math.max(...heights),
+    bumpiness: heights.slice(1).reduce((sum, value, index) => sum + Math.abs(value - heights[index]), 0)
+  };
+}
+
+function addBotLineEffect(game, row) {
+  game.lineEffects.push({ row, life: 360, maxLife: 360 });
+}
+
+function addBotLockEffect(game, cells, color) {
+  game.lockEffects.push({ cells, color, life: 220, maxLife: 220 });
+}
+
+function addBotExplosion(game, x, y) {
+  const centerX = x * BLOCK + BLOCK / 2;
+  const centerY = y * BLOCK + BLOCK / 2;
+
+  for (let i = 0; i < 8; i += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 4;
+    game.particles.push({
+      x: centerX,
+      y: centerY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 480,
+      maxLife: 480,
+      color: ["#f4d35e", "#ea5667", "#67d7d1"][Math.floor(Math.random() * 3)],
+      size: 2 + Math.random() * 4
+    });
+  }
+}
+
+function updateBotEffects(game, deltaTime) {
+  game.shakeTime = Math.max(0, game.shakeTime - deltaTime);
+  game.particles = game.particles
+    .map((particle) => ({ ...particle, x: particle.x + particle.vx, y: particle.y + particle.vy, vy: particle.vy + 0.03, life: particle.life - deltaTime }))
+    .filter((particle) => particle.life > 0);
+  game.lineEffects = game.lineEffects.map((effect) => ({ ...effect, life: effect.life - deltaTime })).filter((effect) => effect.life > 0);
+  game.lockEffects = game.lockEffects.map((effect) => ({ ...effect, life: effect.life - deltaTime })).filter((effect) => effect.life > 0);
+}
+
+function drawBotGame(game, context, canvas) {
   context.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!game) {
+    return;
+  }
+
+  context.save();
+  if (game.shakeTime > 0) {
+    context.translate((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5);
+  }
+
   drawGrid(context, COLS, ROWS, BLOCK);
-  drawBoard(game, context);
-
-  if (game.currentPiece) {
-    drawPiece(getGhostPiece(game), context, BLOCK, 0.22, true);
-    drawPiece(game.currentPiece, context, BLOCK);
-  }
-
-  if (mode === "gameOver" || game.gameOver) {
-    drawGameOver(context, canvas);
-  }
-}
-
-function drawBoard(game, context) {
   game.board.forEach((row, y) => {
     row.forEach((color, x) => {
       if (color) {
         drawBlock(context, x, y, BLOCK, color);
+      }
+    });
+  });
+
+  if (game.currentPiece) {
+    drawPiece(getBotGhostPiece(game), context, BLOCK, 0.22, true);
+    drawPiece(game.currentPiece, context, BLOCK);
+  }
+
+  drawBotEffects(game, context);
+
+  if (game.gameOver) {
+    context.fillStyle = "rgba(9, 10, 13, 0.76)";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#f7f4ea";
+    context.font = "700 30px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+  }
+
+  context.restore();
+}
+
+function drawBotEffects(game, context) {
+  game.lineEffects.forEach((effect) => {
+    const alpha = effect.life / effect.maxLife;
+    context.fillStyle = `rgba(244, 211, 94, ${0.35 * alpha})`;
+    context.fillRect(0, effect.row * BLOCK, COLS * BLOCK, BLOCK);
+  });
+
+  game.lockEffects.forEach((effect) => {
+    const alpha = effect.life / effect.maxLife;
+    context.strokeStyle = effect.color;
+    context.globalAlpha = alpha;
+    context.lineWidth = 2;
+    effect.cells.forEach((cell) => {
+      context.strokeRect(cell.x * BLOCK + 3, cell.y * BLOCK + 3, BLOCK - 6, BLOCK - 6);
+    });
+    context.globalAlpha = 1;
+  });
+
+  game.particles.forEach((particle) => {
+    const alpha = particle.life / particle.maxLife;
+    context.globalAlpha = alpha;
+    context.fillStyle = particle.color;
+    context.fillRect(particle.x, particle.y, particle.size, particle.size);
+    context.globalAlpha = 1;
+  });
+}
+
+function getBotGhostPiece(game) {
+  const ghost = { ...game.currentPiece, shape: game.currentPiece.shape };
+
+  while (!botCollides(game, ghost, ghost.x, ghost.y + 1, ghost.shape)) {
+    ghost.y += 1;
+  }
+
+  return ghost;
+}
+
+function drawBoard() {
+  board.forEach((row, y) => {
+    row.forEach((color, x) => {
+      if (color) {
+        drawBlock(boardContext, x, y, BLOCK, color);
       }
     });
   });
@@ -639,6 +1364,113 @@ function drawBlock(context, x, y, size, color) {
   context.strokeRect(px + 1.5, py + 1.5, size - 3, size - 3);
 }
 
+function addLineEffect(row) {
+  lineEffects.push({
+    row,
+    life: 360,
+    maxLife: 360
+  });
+}
+
+function addLockEffect(cells, color) {
+  lockEffects.push({
+    cells,
+    color,
+    life: 220,
+    maxLife: 220
+  });
+}
+
+function addComboEffect() {
+  for (let i = 0; i < 18; i += 1) {
+    particles.push({
+      x: boardCanvas.width / 2,
+      y: boardCanvas.height / 2,
+      vx: (Math.random() - 0.5) * 5,
+      vy: (Math.random() - 0.5) * 5,
+      life: 520,
+      maxLife: 520,
+      color: "#f4d35e",
+      size: 3 + Math.random() * 3
+    });
+  }
+}
+
+function addExplosion(x, y) {
+  const centerX = x * BLOCK + BLOCK / 2;
+  const centerY = y * BLOCK + BLOCK / 2;
+
+  for (let i = 0; i < 10; i += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 4;
+    particles.push({
+      x: centerX,
+      y: centerY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 480,
+      maxLife: 480,
+      color: ["#f4d35e", "#ea5667", "#67d7d1"][Math.floor(Math.random() * 3)],
+      size: 2 + Math.random() * 4
+    });
+  }
+}
+
+function updateEffects(deltaTime) {
+  shakeTime = Math.max(0, shakeTime - deltaTime);
+
+  particles = particles
+    .map((particle) => ({
+      ...particle,
+      x: particle.x + particle.vx,
+      y: particle.y + particle.vy,
+      vy: particle.vy + 0.03,
+      life: particle.life - deltaTime
+    }))
+    .filter((particle) => particle.life > 0);
+
+  lineEffects = lineEffects
+    .map((effect) => ({
+      ...effect,
+      life: effect.life - deltaTime
+    }))
+    .filter((effect) => effect.life > 0);
+
+  lockEffects = lockEffects
+    .map((effect) => ({
+      ...effect,
+      life: effect.life - deltaTime
+    }))
+    .filter((effect) => effect.life > 0);
+}
+
+function drawEffects() {
+  lineEffects.forEach((effect) => {
+    const alpha = effect.life / effect.maxLife;
+    boardContext.fillStyle = `rgba(244, 211, 94, ${0.35 * alpha})`;
+    boardContext.fillRect(0, effect.row * BLOCK, COLS * BLOCK, BLOCK);
+  });
+
+  lockEffects.forEach((effect) => {
+    const alpha = effect.life / effect.maxLife;
+    boardContext.strokeStyle = effect.color;
+    boardContext.globalAlpha = alpha;
+    boardContext.lineWidth = 2;
+    effect.cells.forEach((cell) => {
+      boardContext.strokeRect(cell.x * BLOCK + 3, cell.y * BLOCK + 3, BLOCK - 6, BLOCK - 6);
+    });
+    boardContext.globalAlpha = 1;
+  });
+
+  particles.forEach((particle) => {
+    const alpha = particle.life / particle.maxLife;
+    boardContext.globalAlpha = alpha;
+    boardContext.fillStyle = particle.color;
+    boardContext.fillRect(particle.x, particle.y, particle.size, particle.size);
+    boardContext.globalAlpha = 1;
+  });
+}
+
 function drawGrid(context, cols, rows, blockSize) {
   context.fillStyle = "#090a0d";
   context.fillRect(0, 0, cols * blockSize, rows * blockSize);
@@ -660,46 +1492,173 @@ function drawGrid(context, cols, rows, blockSize) {
   }
 }
 
-function drawNext(game, context, canvas) {
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  drawGrid(context, 4, 4, 30);
+function drawNext() {
+  nextContext.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  drawGrid(nextContext, 4, 4, 30);
 
-  if (!game.nextPiece) {
+  if (!nextPiece) {
     return;
   }
 
   const preview = {
-    ...game.nextPiece,
-    x: (4 - game.nextPiece.shape[0].length) / 2,
-    y: (4 - game.nextPiece.shape.length) / 2
+    ...nextPiece,
+    x: (4 - nextPiece.shape[0].length) / 2,
+    y: (4 - nextPiece.shape.length) / 2
   };
 
-  drawPiece(preview, context, 30);
+  drawPiece(preview, nextContext, 30);
 }
 
-function drawGameOver(context, canvas) {
-  context.fillStyle = "rgba(9, 10, 13, 0.76)";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "#f7f4ea";
-  context.font = "700 34px Arial, Helvetica, sans-serif";
-  context.textAlign = "center";
-  context.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 12);
-  context.font = "16px Arial, Helvetica, sans-serif";
-  context.fillText("Retornando ao inicio", canvas.width / 2, canvas.height / 2 + 24);
+function serializeState() {
+  return {
+    board,
+    currentPiece,
+    score,
+    level,
+    lines: linesCleared,
+    gameOver
+  };
+}
+
+function sendMultiplayerState() {
+  if (gameMode !== "multiplayer" || !socket || socket.readyState !== WebSocket.OPEN) {
+    return;
+  }
+
+  socket.send(JSON.stringify({
+    type: "state",
+    state: serializeState()
+  }));
+}
+
+function openMultiplayerLobby() {
+  gameMode = "multiplayer";
+  mode = "multiplayerLobby";
+  multiplayerResult = "";
+  updateScreen();
+}
+
+function openBotDifficulty() {
+  mode = "botDifficulty";
+  updateScreen();
+}
+
+function connectSocket() {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    return socket;
+  }
+
+  const protocol = location.protocol === "https:" ? "wss" : "ws";
+  socket = new WebSocket(`${protocol}://${location.host}`);
+
+  socket.addEventListener("message", (event) => {
+    const data = JSON.parse(event.data);
+    handleSocketMessage(data);
+  });
+
+  socket.addEventListener("close", () => {
+    roomStatusElement.textContent = "Conexao encerrada";
+  });
+
+  return socket;
+}
+
+function handleSocketMessage(data) {
+  if (data.type === "roomCreated") {
+    roomCode = data.code;
+    playerLabel = data.player;
+    roomStatusElement.textContent = `Sala ${roomCode}. Aguardando Jogador 2`;
+    updateModeLayout();
+  } else if (data.type === "joined") {
+    roomCode = data.code;
+    playerLabel = data.player;
+    roomStatusElement.textContent = `Conectado na sala ${roomCode}`;
+    startMultiplayerGame();
+  } else if (data.type === "peerJoined") {
+    roomStatusElement.textContent = `Jogador conectado na sala ${roomCode}`;
+    startMultiplayerGame();
+  } else if (data.type === "state") {
+    remoteState = data.state;
+    remoteGameOver = Boolean(remoteState.gameOver);
+    updateStats();
+
+    if (remoteGameOver && !gameOver) {
+      multiplayerResult = `${playerLabel} venceu`;
+      setMode("gameOver");
+    } else if (remoteGameOver && gameOver) {
+      finishMultiplayerByScore();
+    }
+  } else if (data.type === "peerLeft") {
+    roomStatusElement.textContent = "Outro jogador saiu da sala";
+  } else if (data.type === "error") {
+    roomStatusElement.textContent = data.message;
+  }
+}
+
+function startMultiplayerGame() {
+  gameMode = "multiplayer";
+  remoteState = null;
+  remoteGameOver = false;
+  multiplayerResult = "";
+  setMode("playing");
+  sendMultiplayerState();
+}
+
+function finishMultiplayerByScore() {
+  if (score > (remoteState?.score || 0)) {
+    multiplayerResult = `${playerLabel} venceu por pontuacao`;
+  } else if (score < (remoteState?.score || 0)) {
+    multiplayerResult = `${opponentLabelElement.textContent} venceu por pontuacao`;
+  } else {
+    multiplayerResult = "Empate";
+  }
+
+  setMode("gameOver");
+}
+
+function drawGameOver() {
+  boardContext.fillStyle = "rgba(9, 10, 13, 0.76)";
+  boardContext.fillRect(0, 0, boardCanvas.width, boardCanvas.height);
+  boardContext.fillStyle = "#f7f4ea";
+  boardContext.font = "700 34px Arial, Helvetica, sans-serif";
+  boardContext.textAlign = "center";
+  boardContext.fillText("GAME OVER", boardCanvas.width / 2, boardCanvas.height / 2 - 12);
+  boardContext.font = "16px Arial, Helvetica, sans-serif";
+  boardContext.fillText("Retornando ao inicio", boardCanvas.width / 2, boardCanvas.height / 2 + 24);
 }
 
 function startPlaying() {
+  gameMode = "solo";
+  playerLabel = "Jogador Solo";
   setMode("playing");
 }
 
+function startSolo() {
+  gameMode = "solo";
+  playerLabel = "Jogador Solo";
+  closeSocket();
+  setMode("playing");
+}
+
+function closeSocket() {
+  if (socket) {
+    socket.close();
+    socket = null;
+  }
+}
+
 document.addEventListener("keydown", (event) => {
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)) {
+    return;
+  }
+
   if (mode !== "playing") {
     event.preventDefault();
 
     if (mode === "gameOver") {
       setMode("title");
-    } else {
-      startPlaying();
+    } else if (mode === "title" || mode === "demo" || mode === "scores") {
+      startSolo();
     }
 
     return;
@@ -717,15 +1676,11 @@ document.addEventListener("keydown", (event) => {
   } else if (event.key === "ArrowDown") {
     event.preventDefault();
     softDrop();
-    games.forEach((game) => {
-      game.dropCounter = 0;
-    });
+    dropCounter = 0;
   } else if (event.code === "Space") {
     event.preventDefault();
     hardDrop();
-    games.forEach((game) => {
-      game.dropCounter = 0;
-    });
+    dropCounter = 0;
   } else if (event.key.toLowerCase() === "r") {
     startPlaying();
   }
@@ -734,17 +1689,71 @@ document.addEventListener("keydown", (event) => {
 screenElement.addEventListener("click", () => {
   if (mode === "gameOver") {
     setMode("title");
-  } else if (mode !== "playing") {
-    startPlaying();
   }
 });
 
 startButton.addEventListener("click", (event) => {
   event.stopPropagation();
-  startPlaying();
+  startSolo();
+});
+
+multiplayerButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  openMultiplayerLobby();
+});
+
+botButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  openBotDifficulty();
+});
+
+createRoomButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  const ws = connectSocket();
+  roomStatusElement.textContent = "Criando sala...";
+  ws.addEventListener("open", () => {
+    ws.send(JSON.stringify({ type: "create" }));
+  }, { once: true });
+
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "create" }));
+  }
+});
+
+joinRoomButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  const code = roomCodeInput.value.trim().toUpperCase();
+
+  if (!code) {
+    roomStatusElement.textContent = "Informe o codigo da sala";
+    return;
+  }
+
+  const ws = connectSocket();
+  roomStatusElement.textContent = "Entrando na sala...";
+  ws.addEventListener("open", () => {
+    ws.send(JSON.stringify({ type: "join", code }));
+  }, { once: true });
+
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "join", code }));
+  }
+});
+
+document.querySelectorAll(".difficulty-button").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    selectedBotDifficulty = button.dataset.difficulty;
+    localStorage.setItem("tetris-bot-difficulty", selectedBotDifficulty);
+    botStatusElement.textContent = `Dificuldade ${button.textContent} selecionada`;
+    gameMode = "bot";
+    playerLabel = "VOCE";
+    closeSocket();
+    setMode("playing");
+  });
 });
 
 resetGame();
 setMode("title");
 requestAnimationFrame(update);
-console.log("ETAPA 4 CONCLUÍDA — aguardando validação");
+console.log("ETAPA 6 CONCLUÍDA — aguardando validação");

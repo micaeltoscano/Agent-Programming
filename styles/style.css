@@ -21,7 +21,7 @@ body {
 }
 
 .game-shell {
-  width: min(96vw, 1160px);
+  width: min(92vw, 760px);
   display: grid;
   grid-template-columns: auto minmax(190px, 1fr);
   gap: 24px;
@@ -45,17 +45,49 @@ canvas {
   image-rendering: pixelated;
 }
 
-.boards {
+.board-set {
   display: grid;
-  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
-.board {
-  width: min(26vw, 250px);
+.board-set.multiplayer {
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+
+.board-set.bot-mode {
+  grid-template-columns: repeat(3, minmax(170px, 1fr));
+}
+
+.board-panel h2 {
+  margin: 0 0 8px;
+  text-align: center;
+  color: #f7f4ea;
+}
+
+#board {
+  width: min(70vw, 300px);
   aspect-ratio: 1 / 2;
   height: auto;
   background: #090a0d;
+}
+
+#opponent-board,
+#bot-two-board {
+  width: min(35vw, 300px);
+  aspect-ratio: 1 / 2;
+  height: auto;
+  background: #090a0d;
+}
+
+.board-set.multiplayer #board,
+.board-set.bot-mode #board {
+  width: min(35vw, 300px);
+}
+
+.board-set.bot-mode #opponent-board,
+.board-set.bot-mode #bot-two-board {
+  width: min(24vw, 300px);
 }
 
 .screen {
@@ -94,6 +126,51 @@ button {
   color: #101115;
   cursor: pointer;
   font: 700 14px/1 Arial, Helvetica, sans-serif;
+}
+
+.mode-buttons {
+  width: min(100%, 220px);
+  display: grid;
+  gap: 8px;
+}
+
+.mode-buttons[hidden] {
+  display: none;
+}
+
+.mode-buttons button {
+  width: 100%;
+}
+
+.mode-buttons .pending {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(247, 244, 234, 0.72);
+}
+
+.mode-panel {
+  width: min(100%, 260px);
+  display: grid;
+  gap: 8px;
+}
+
+.mode-panel[hidden] {
+  display: none;
+}
+
+.join-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+input {
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid rgba(247, 244, 234, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f4ea;
+  font: 700 14px/40px Arial, Helvetica, sans-serif;
+  text-transform: uppercase;
 }
 
 .side-panel {
@@ -200,20 +277,6 @@ kbd {
   background: #090a0d;
 }
 
-.next-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.next-grid canvas {
-  width: 100%;
-  max-width: 80px;
-  aspect-ratio: 1;
-  height: auto;
-  background: #090a0d;
-}
-
 @media (max-width: 640px) {
   body {
     place-items: start center;
@@ -227,15 +290,19 @@ kbd {
 
   .play-area {
     justify-self: center;
-    width: 100%;
   }
 
-  .boards {
-    gap: 6px;
+  .board-set.multiplayer,
+  .board-set.bot-mode {
+    grid-template-columns: 1fr;
   }
 
-  .board {
-    width: 100%;
+  #opponent-board,
+  #bot-two-board,
+  .board-set.bot-mode #board,
+  .board-set.bot-mode #opponent-board,
+  .board-set.bot-mode #bot-two-board {
+    width: min(70vw, 300px);
   }
 
   .side-panel {
