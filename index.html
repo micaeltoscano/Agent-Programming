@@ -1,93 +1,65 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tetris</title>
-  <link rel="stylesheet" href="styles/style.css" />
-</head>
-<body>
-  <div class="app">
-    <header class="header">
-      <div>
-        <p class="eyebrow">Modo Pro</p>
-        <h1>Tetris Arcade</h1>
-        <p class="subtitle">Três telas sincronizadas com estilo premium e controles sem scroll.</p>
-      </div>
-    </header>
-
-    <main class="main-grid">
-      <section class="board-panel">
-        <div class="board-shell">
-          <div class="board-grid">
-            <div class="board-card">
-              <span class="board-label">Tela 1</span>
-              <canvas id="tetris-board-1" width="300" height="600"></canvas>
-            </div>
-            <div class="board-card">
-              <span class="board-label">Tela 2</span>
-              <canvas id="tetris-board-2" width="300" height="600"></canvas>
-            </div>
-            <div class="board-card">
-              <span class="board-label">Tela 3</span>
-              <canvas id="tetris-board-3" width="300" height="600"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <div class="status-panel boxed">
-          <div class="status-item">
-            <span class="status-title">Pontuação total</span>
-            <strong id="score">0</strong>
-          </div>
-          <div class="status-item">
-            <span class="status-title">Linhas totais</span>
-            <strong id="lines">0</strong>
-          </div>
-          <div class="status-item">
-            <span class="status-title">Nível atual</span>
-            <strong id="level">1</strong>
-          </div>
-        </div>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tetris Arcade</title>
+    <link rel="stylesheet" href="styles/style.css">
+  </head>
+  <body>
+    <main class="game-shell" aria-label="Tetris Arcade">
+      <section class="play-area">
+        <canvas id="board" width="300" height="600" aria-label="Campo de jogo"></canvas>
       </section>
 
-      <aside class="sidebar">
-        <div class="card action-card">
-          <button id="start-button" type="button" class="primary-button">Iniciar Jogo</button>
+      <aside class="side-panel" aria-label="Informacoes do jogo">
+        <div class="panel-block">
+          <h1>Tetris Arcade</h1>
+          <p>Fase 2: niveis e pontuacao</p>
         </div>
 
-        <div class="card next-grid">
-          <h2>Próximo</h2>
-          <div class="next-list">
-            <div class="next-card small">
-              <span>Tela 1</span>
-              <canvas id="next-piece-1" width="120" height="120"></canvas>
+        <div class="panel-block stats">
+          <h2>Placar</h2>
+          <dl>
+            <div>
+              <dt>Pontos</dt>
+              <dd id="score">0</dd>
             </div>
-            <div class="next-card small">
-              <span>Tela 2</span>
-              <canvas id="next-piece-2" width="120" height="120"></canvas>
+            <div>
+              <dt>Recorde</dt>
+              <dd id="high-score">0</dd>
             </div>
-            <div class="next-card small">
-              <span>Tela 3</span>
-              <canvas id="next-piece-3" width="120" height="120"></canvas>
+            <div>
+              <dt>Nivel</dt>
+              <dd id="level">1</dd>
             </div>
-          </div>
+            <div>
+              <dt>Linhas</dt>
+              <dd id="lines">0</dd>
+            </div>
+            <div>
+              <dt>Combo</dt>
+              <dd id="combo">0</dd>
+            </div>
+          </dl>
         </div>
 
-        <div class="card controls-card">
+        <div class="panel-block">
+          <h2>Proxima</h2>
+          <canvas id="next" width="120" height="120" aria-label="Proxima peca"></canvas>
+        </div>
+
+        <div class="panel-block controls">
           <h2>Controles</h2>
-          <ul>
-            <li><strong>← / →</strong> - mover as 3 telas</li>
-            <li><strong>↑</strong> - rotacionar as 3 telas</li>
-            <li><strong>↓</strong> - queda rápida</li>
-            <li><strong>Espaço</strong> - queda instantânea</li>
-            <li><strong>P</strong> - pausar / retomar</li>
-          </ul>
+          <p><kbd>←</kbd><kbd>→</kbd> mover</p>
+          <p><kbd>↑</kbd> rotacionar</p>
+          <p><kbd>↓</kbd> acelerar</p>
+          <p><kbd>Espaco</kbd> soltar</p>
+          <p><kbd>R</kbd> reiniciar</p>
         </div>
       </aside>
     </main>
-  </div>
 
-  <script type="module" src="src/app.js"></script>
-</body>
+    <script src="src/app.js"></script>
+  </body>
 </html>
