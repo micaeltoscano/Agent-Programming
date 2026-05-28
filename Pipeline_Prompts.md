@@ -264,15 +264,15 @@ Ao concluir esta etapa, exiba no console:
 
 ---
 
-## Fase 6: Modo Contra Bot — Você vs Villacorta 67 vs Villacorta 69
+## Fase 6: Modo Contra Bot — Você vs Pelicano vs Pelicana
 
 Transforme o modo Contra Bot em uma partida competitiva com três campos de jogo.
 
 A partida deve conter:
 
 - Campo 1: jogador humano;
-- Campo 2: bot chamado Villacorta 67;
-- Campo 3: bot chamado Villacorta 69.
+- Campo 2: bot chamado Pelicano;
+- Campo 3: bot chamado Pelicana.
 
 Cada campo deve possuir:
 
@@ -288,7 +288,7 @@ Cada campo deve possuir:
 
 O jogador humano deve continuar usando o teclado normalmente.
 
-Os bots Villacorta 67 e Villacorta 69 devem ser implementados internamente em JavaScript, sem uso obrigatório de APIs externas.
+Os bots Pelicano e Pelicana devem ser implementados internamente em JavaScript, sem uso obrigatório de APIs externas.
 
 Cada bot deve analisar seu próprio tabuleiro e escolher movimentos automaticamente.
 
@@ -312,8 +312,8 @@ A tomada de decisão dos bots deve considerar:
 O jogo deve exibir claramente:
 
 - VOCÊ;
-- VILLACORTA 67;
-- VILLACORTA 69.
+- PELICANO;
+- PELICANA.
 
 A dificuldade escolhida na Fase 5 deve afetar os dois bots.
 

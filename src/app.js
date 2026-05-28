@@ -14,6 +14,8 @@ const GAME_OVER_TIME = 5000;
 const LINE_POINTS = [0, 100, 300, 500, 800];
 const T_SPIN_POINTS = [400, 800, 1200, 1600];
 const BOMB_BLOCK_POINTS = 25;
+const BOT_ONE_NAME = "PELICANO";
+const BOT_TWO_NAME = "PELICANA";
 
 const boardCanvas = document.getElementById("board");
 const boardContext = boardCanvas.getContext("2d");
@@ -224,7 +226,7 @@ function resetGame() {
   remoteReady = false;
   resetMultiplayerLobbyVisual();
   if (gameMode === "bot") {
-    botGames = [createBotGame("VILLACORTA 67", "balanced"), createBotGame("VILLACORTA 69", "clean")];
+    botGames = [createBotGame(BOT_ONE_NAME, "balanced"), createBotGame(BOT_TWO_NAME, "clean")];
     botFinalRanking = [];
   } else {
     botGames = [];
@@ -306,8 +308,8 @@ function updateModeLayout() {
   botOneScoreRow.hidden = gameMode !== "bot";
   botTwoScoreRow.hidden = gameMode !== "bot";
   localLabelElement.textContent = gameMode === "multiplayer" ? playerLabel : (gameMode === "bot" ? "VOCÊ" : "Jogador Solo");
-  opponentLabelElement.textContent = gameMode === "bot" ? "VILLACORTA 67" : (playerLabel === "Jogador 1" ? "Jogador 2" : "Jogador 1");
-  botTwoLabelElement.textContent = "VILLACORTA 69";
+  opponentLabelElement.textContent = gameMode === "bot" ? BOT_ONE_NAME : (playerLabel === "Jogador 1" ? "Jogador 2" : "Jogador 1");
+  botTwoLabelElement.textContent = BOT_TWO_NAME;
   updatePauseButton();
 }
 
