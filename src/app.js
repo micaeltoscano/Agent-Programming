@@ -439,10 +439,7 @@ function softDrop() {
   if (!collides(currentPiece, currentPiece.x, currentPiece.y + 1)) {
     currentPiece.y += 1;
     score += 1;
-    addFloatingText("+1 SOFT", currentPiece.x * BLOCK + BLOCK, currentPiece.y * BLOCK, "#06b6d4", {
-      size: 17,
-      stroke: true
-    });
+    addFloatingText("+1", currentPiece.x * BLOCK + BLOCK, currentPiece.y * BLOCK, "#67d7d1");
     lastMoveWasRotation = false;
     updateHighScore();
     updateStats();
@@ -465,11 +462,7 @@ function hardDrop() {
 
   score += distance * 2;
   if (distance > 0) {
-    addFloatingText(`HARD +${distance * 2}`, currentPiece.x * BLOCK + BLOCK, currentPiece.y * BLOCK, "#06b6d4", {
-      size: 19,
-      glow: true,
-      stroke: true
-    });
+    addFloatingText(`Hard +${distance * 2}`, currentPiece.x * BLOCK + BLOCK, currentPiece.y * BLOCK, "#67d7d1");
   }
   lastMoveWasRotation = false;
   updateHighScore();
@@ -506,13 +499,7 @@ function lockPiece() {
     bombDestroyed = activateLineBomb(lockedCells);
     if (bombDestroyed > 0) {
       score += bombDestroyed * BOMB_BLOCK_POINTS;
-      addFloatingText(`BOMBA +${bombDestroyed * BOMB_BLOCK_POINTS}`, boardCanvas.width / 2, boardCanvas.height / 2, "#ef4444", {
-        size: 28,
-        life: 1250,
-        vy: -0.28,
-        glow: true,
-        stroke: true
-      });
+      addFloatingText(`Bomba +${bombDestroyed * BOMB_BLOCK_POINTS}`, boardCanvas.width / 2, boardCanvas.height / 2, "#ea5667");
     }
   }
 
@@ -602,39 +589,22 @@ function applyScore(cleared, wasTSpin) {
   if (wasTSpin) {
     points += (T_SPIN_POINTS[cleared] || T_SPIN_POINTS[0]) * level;
     if (cleared > 0) {
-      addFloatingText("T-SPIN", boardCanvas.width / 2, boardCanvas.height / 2 - 34, "#8b5cf6", {
-        size: 24,
-        glow: true,
-        stroke: true
-      });
+      addFloatingText("T-Spin", boardCanvas.width / 2, boardCanvas.height / 2 - 34, "#a56de2");
     }
   } else if (cleared > 0) {
     points += LINE_POINTS[cleared] * level;
-    addFloatingText(`${cleared} LINHA${cleared > 1 ? "S" : ""}`, boardCanvas.width / 2, boardCanvas.height / 2 - 34, "#f59e0b", {
-      size: 22,
-      glow: true,
-      stroke: true
-    });
+    addFloatingText(`${cleared} linha${cleared > 1 ? "s" : ""}`, boardCanvas.width / 2, boardCanvas.height / 2 - 34, "#f4d35e");
   }
 
   if (cleared > 0 && combo > 0) {
     points += combo * 50 * level;
     addComboEffect();
-    addFloatingText(`COMBO x${combo}`, boardCanvas.width / 2, boardCanvas.height / 2 - 62, "#06b6d4", {
-      size: 24,
-      life: 1100,
-      glow: true,
-      stroke: true
-    });
+    addFloatingText(`Combo ${combo}`, boardCanvas.width / 2, boardCanvas.height / 2 - 58, "#67d7d1");
   }
 
   if (difficultClear && backToBack) {
     points = Math.floor(points * 1.5);
-    addFloatingText("BACK-TO-BACK", boardCanvas.width / 2, boardCanvas.height / 2 - 90, "#f59e0b", {
-      size: 21,
-      glow: true,
-      stroke: true
-    });
+    addFloatingText("Back-to-Back", boardCanvas.width / 2, boardCanvas.height / 2 - 82, "#f4d35e");
   }
 
   if (difficultClear) {
@@ -645,11 +615,7 @@ function applyScore(cleared, wasTSpin) {
 
   score += points;
   if (points > 0) {
-    addFloatingText(`+${points} PONTOS`, boardCanvas.width / 2, boardCanvas.height / 2 + 22, "#0f172a", {
-      size: 24,
-      life: 1150,
-      stroke: true
-    });
+    addFloatingText(`+${points}`, boardCanvas.width / 2, boardCanvas.height / 2 + 18, "#0f172a");
   }
   updateHighScore();
   updateStats();
@@ -1299,18 +1265,18 @@ function addBotExplosion(game, x, y) {
   const centerX = x * BLOCK + BLOCK / 2;
   const centerY = y * BLOCK + BLOCK / 2;
 
-  for (let i = 0; i < 34; i += 1) {
+  for (let i = 0; i < 18; i += 1) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 3 + Math.random() * 8;
+    const speed = 2.2 + Math.random() * 6;
     game.particles.push({
       x: centerX,
       y: centerY,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      life: 680,
-      maxLife: 680,
-      color: ["#ef4444", "#f97316", "#facc15", "#ffffff", "#60a5fa"][Math.floor(Math.random() * 5)],
-      size: 4 + Math.random() * 8
+      life: 480,
+      maxLife: 480,
+      color: ["#3b82f6", "#60a5fa", "#93c5fd", "#ffffff"][Math.floor(Math.random() * 4)],
+      size: 3 + Math.random() * 5
     });
   }
 }
@@ -1386,12 +1352,7 @@ function drawBotEffects(game, context) {
     const alpha = particle.life / particle.maxLife;
     context.globalAlpha = alpha;
     context.fillStyle = particle.color;
-    context.shadowColor = particle.color;
-    context.shadowBlur = 12;
-    context.beginPath();
-    context.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-    context.fill();
-    context.shadowBlur = 0;
+    context.fillRect(particle.x, particle.y, particle.size, particle.size);
     context.globalAlpha = 1;
   });
 }
@@ -1516,42 +1477,33 @@ function addExplosion(x, y) {
   const centerX = x * BLOCK + BLOCK / 2;
   const centerY = y * BLOCK + BLOCK / 2;
 
-  addFloatingText("BOOM!", centerX, centerY, "#ef4444", {
-    size: 22,
-    life: 950,
-    vy: -0.2,
-    glow: true,
-    stroke: true
-  });
+  addFloatingText("BOOM", centerX, centerY, "#ea5667");
 
-  for (let i = 0; i < 46; i += 1) {
+  for (let i = 0; i < 22; i += 1) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 3 + Math.random() * 9;
+    const speed = 2.2 + Math.random() * 6;
     particles.push({
       x: centerX,
       y: centerY,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      life: 720,
-      maxLife: 720,
-      color: ["#ef4444", "#f97316", "#facc15", "#ffffff", "#38bdf8"][Math.floor(Math.random() * 5)],
-      size: 4 + Math.random() * 9
+      life: 480,
+      maxLife: 480,
+      color: ["#3b82f6", "#60a5fa", "#93c5fd", "#ffffff"][Math.floor(Math.random() * 4)],
+      size: 3 + Math.random() * 5
     });
   }
 }
 
-function addFloatingText(text, x, y, color = "#0f172a", options = {}) {
+function addFloatingText(text, x, y, color = "#0f172a") {
   floatingTexts.push({
     text,
     x,
     y,
-    vy: options.vy ?? -0.45,
-    life: options.life ?? 900,
-    maxLife: options.life ?? 900,
-    color,
-    size: options.size ?? 16,
-    glow: Boolean(options.glow),
-    stroke: Boolean(options.stroke)
+    vy: -0.45,
+    life: 900,
+    maxLife: 900,
+    color
   });
 }
 
@@ -1594,20 +1546,12 @@ function updateEffects(deltaTime) {
 function drawFloatingTexts(context, items) {
   context.save();
   context.textAlign = "center";
+  context.font = "700 16px Arial, Helvetica, sans-serif";
   items.forEach((item) => {
     context.globalAlpha = item.life / item.maxLife;
-    context.font = `900 ${item.size}px Arial, Helvetica, sans-serif`;
-    context.lineWidth = Math.max(3, item.size * 0.18);
-    context.shadowColor = item.glow ? item.color : "transparent";
-    context.shadowBlur = item.glow ? 18 : 0;
-    if (item.stroke) {
-      context.strokeStyle = "rgba(255, 255, 255, 0.92)";
-      context.strokeText(item.text, item.x, item.y);
-    }
     context.fillStyle = item.color;
     context.fillText(item.text, item.x, item.y);
   });
-  context.shadowBlur = 0;
   context.restore();
 }
 
@@ -1642,12 +1586,7 @@ function drawEffects() {
     const alpha = particle.life / particle.maxLife;
     boardContext.globalAlpha = alpha;
     boardContext.fillStyle = particle.color;
-    boardContext.shadowColor = particle.color;
-    boardContext.shadowBlur = 12;
-    boardContext.beginPath();
-    boardContext.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-    boardContext.fill();
-    boardContext.shadowBlur = 0;
+    boardContext.fillRect(particle.x, particle.y, particle.size, particle.size);
     boardContext.globalAlpha = 1;
   });
 }
