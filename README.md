@@ -1,103 +1,143 @@
 # Tetris Arcade
 
-Jogo Tetris em HTML, CSS e JavaScript com três telas sincronizadas, sistema de pontuação, níveis progressivos e tela de abertura/game over.
+Tetris Arcade e um jogo de Tetris feito com HTML, CSS e JavaScript vanilla, renderizado em Canvas. O projeto inclui modo solo, multiplayer online com WebSocket, modo contra bots, pontuacao avancada, ranking local, efeitos visuais e pausa.
+
+## Tecnologias
+
+- HTML5
+- CSS3
+- JavaScript vanilla
+- Canvas API
+- Node.js para servidor estatico e WebSocket do multiplayer
+
+Nao ha frameworks externos no jogo principal.
+
+## Como Rodar
+
+Instale uma versao recente do Node.js e execute:
+
+```bash
+npm start
+```
+
+Depois acesse:
+
+```text
+http://localhost:8000
+```
+
+Tambem e possivel abrir `index.html` diretamente no navegador para jogar solo ou contra bot. Para o Multiplayer Online, use o servidor com `npm start`.
 
 ## Estrutura
 
-- `index.html` - markup principal com suporte para telas de abertura e game over.
-- `styles/style.css` - estilo do game com responsividade.
-- `src/` - lógica do jogo em módulos:
-  - `app.js` - ponto de entrada que coordena ScreenManager e GameManager.
-  - `screenManager.js` - **NOVO** - gerencia telas (abertura, jogo, game over) e persistência de high scores.
-  - `gameManager.js` - gerencia 3 telas e controla todos os jogos juntos.
-  - `game.js` - controle de um único tabuleiro com integração de som.
-  - `board.js` - gerenciamento da grade do tabuleiro e limpeza de linhas.
-  - `piece.js` - definição e rotação de tetrominos (7 tetrominós clássicos + variações).
-  - `renderer.js` - desenho do tabuleiro, peças, próxima peça e efeitos visuais.
-  - `inputHandler.js` - leitura de teclado e eventos.
-  - `soundManager.js` - **NOVO** - reprodução de efeitos sonoros usando Web Audio API.
-  - `constants.js` - configurações, formas e pontuação.
+- `index.html`: tela principal, paineis, placar, menus e canvases.
+- `styles/style.css`: layout, responsividade, botoes, paineis e acabamento visual.
+- `src/app.js`: toda a logica do jogo, renderizacao, modos, pontuacao, bots e efeitos.
+- `server.js`: servidor HTTP local e WebSocket para salas multiplayer.
+- `Pipeline_Prompts.md`: roteiro das fases do projeto.
+- `Agente_Validador.md` e `Agente_Testador.md`: instrucoes para validacao e teste.
 
-## Funcionalidades Implementadas
+## Modos de Jogo
 
-### Etapa 1: Base do Jogo ✓
-- [x] Campo de jogo 10x20
-- [x] Todos os 7 tetrominós (I, J, L, O, S, T, Z) + variações (P, U, Q)
-- [x] Movimento de peças (esquerda/direita)
-- [x] Rotação de peças com teste de posição
-- [x] Aceleração da queda (soft drop e hard drop)
-- [x] Peças caindo com o tempo
-- [x] Detecção de colisão
-- [x] Limpeza de linhas completas
-- [x] Condição de fim de jogo
-- [x] Exibição da próxima peça
+### Jogador Solo
 
-### Etapa 2: Níveis e Pontuação ✓
-- [x] Sistema de níveis progressivos
-- [x] Aumento de velocidade conforme o nível sobe
-- [x] Sistema de pontuação baseado em linhas limpas
-- [x] Pontuação exibida durante o jogo
-- [x] Nível atual exibido
-- [x] Próxima peça exibida
-- [x] High scores persistentes (localStorage)
+Modo classico de Tetris com um tabuleiro, proxima peca, peca fantasma, pontuacao, niveis, combos, high score e game over.
 
-### Etapa 3: Tela de Abertura ✓
-- [x] Tela inicial com título e instruções
-- [x] Exibição das 5 maiores pontuações
-- [x] Botão "JOGAR" ou qualquer tecla para começar
-- [x] Tela de "GAME OVER" com estatísticas finais
-- [x] Retorno à tela de abertura após game over
-- [x] Transições suaves entre telas
+### Multiplayer Online
 
-### Etapa 4: Adições Extras ✓
-- [x] Persistência de high scores em localStorage
-- [x] Efeitos visuais (partículas ao limpar linhas, detalhes de células)
-- [x] Efeitos sonoros (movimento, rotação, queda, limpeza de linhas)
-- [x] Sistema de 3 telas sincronizadas
-- [x] Pausa/retomada do jogo (tecla P)
-- [x] Design visual premium com gradientes e estilos modernos
+Permite criar ou entrar em uma sala por codigo. A partida comeca quando os dois jogadores estao conectados e prontos. Cada jogador controla seu proprio tabuleiro, e o resultado e definido por sobrevivencia ou pontuacao.
 
-## Como usar
+### Contra Bot
 
-1. Abra `index.html` no navegador.
-2. Ou use um servidor local para garantir que os módulos ES carreguem corretamente.
-3. Pressione o botão "JOGAR" ou qualquer tecla para começar.
+Partida com tres competidores:
+
+- VOCE
+- PELICANO
+- PELICANA
+
+O jogador escolhe a dificuldade dos bots:
+
+- Facil
+- Medio
+- Dificil / Aura++
+
+Os bots analisam seus proprios tabuleiros e executam movimentos automaticamente, incluindo deslocamento, rotacao, soft drop e hard drop.
+
+## Recursos Implementados
+
+- Campo de jogo 10x20 em Canvas.
+- Sete tetrominos classicos: I, J, L, O, S, T e Z.
+- Movimento lateral, rotacao, soft drop e hard drop.
+- Queda automatica com velocidade progressiva.
+- Deteccao de colisao e travamento de pecas.
+- Limpeza de linhas completas.
+- Proxima peca e peca fantasma.
+- Sistema de pontuacao com linhas, T-Spin, Back-to-Back, Combo, Soft Drop e Hard Drop.
+- High score e ranking salvos em `localStorage`.
+- Bomba de linha ao completar linhas.
+- Particulas, tremor, efeitos de linha, efeitos de travamento e textos flutuantes.
+- Tela inicial, tela de high scores, game over e retorno ao menu.
+- Pausa por botao ou teclado.
+- Layout responsivo para solo, multiplayer e contra bot.
 
 ## Controles
 
-- `←` / `→` - mover peça
-- `↑` - rotacionar
-- `↓` - queda rápida
-- `Espaço` - queda instantânea
-- `P` - pausar/retomar
-- Qualquer tecla na tela de abertura - iniciar jogo
-- Qualquer tecla na tela de game over - voltar ao menu
+- `Seta esquerda`: mover para a esquerda
+- `Seta direita`: mover para a direita
+- `Seta cima`: rotacionar
+- `Seta baixo`: acelerar queda
+- `Espaco`: hard drop
+- `P`: pausar ou retomar
+- `Esc`: voltar ao menu
+- `R`: reiniciar partida
 
-## Sistema de Pontuação
+## Pontuacao
 
-- 1 linha: 40 pontos
-- 2 linhas: 100 pontos
-- 3 linhas: 300 pontos
-- 4 linhas (Tetris): 1200 pontos
+A pontuacao considera:
 
-A pontuação é multiplicada pelo nível atual.
+- Linhas removidas
+- T-Spin
+- Back-to-Back
+- Combo
+- Soft drop
+- Hard drop
+- Blocos destruidos pela bomba de linha
 
-## Velocidade dos Níveis
+Valores principais:
 
-A velocidade aumenta progressivamente conforme o nível sobe:
-- Nível 1: 520ms
-- Nível 2: 470ms
-- ... e assim por diante até um mínimo de 40ms
+- 1 linha: 100 pontos
+- 2 linhas: 300 pontos
+- 3 linhas: 500 pontos
+- 4 linhas: 800 pontos
+- Bloco destruido pela bomba: 25 pontos
 
-## Compatibilidade
+Os valores sao multiplicados pelo nivel atual quando aplicavel.
 
-- Chrome/Edge 90+
-- Firefox 88+
-- Safari 14+
-- Navegadores modernos com suporte a ES6 modules
+## Multiplayer
 
-## Notas
+O servidor em `server.js` faz:
 
-- O jogo usa Web Audio API para efeitos sonoros (pode ser silenciado se não suportado)
-- As pontuações são salvas automaticamente em localStorage
-- O jogo é responsivo e funciona em diferentes tamanhos de tela
+- Servir os arquivos do jogo.
+- Criar salas com codigo.
+- Permitir entrada de um segundo jogador.
+- Controlar estado de pronto dos jogadores.
+- Sincronizar estado e resultado entre os clientes.
+
+Fluxo basico:
+
+1. Jogador 1 clica em `Criar Sala`.
+2. Jogador 2 informa o codigo e clica em `Entrar`.
+3. Ambos clicam em `Pronto`.
+4. A partida inicia automaticamente.
+
+## Persistencia
+
+O jogo usa `localStorage` para salvar:
+
+- Maior pontuacao
+- Ranking local
+- Dificuldade selecionada para os bots
+
+## Estado do Projeto
+
+O projeto esta na Fase 7, com refinamentos de interface, efeitos visuais, pausa, retorno ao menu e ajustes nos modos multiplayer e contra bot.
