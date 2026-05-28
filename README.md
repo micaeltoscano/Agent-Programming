@@ -1,143 +1,143 @@
 # Tetris Arcade
 
-Tetris Arcade e um jogo de Tetris feito com HTML, CSS e JavaScript vanilla, renderizado em Canvas. O projeto inclui modo solo, multiplayer online com WebSocket, modo contra bots, pontuacao avancada, ranking local, efeitos visuais e pausa.
+Tetris Arcade is a Tetris game built with HTML, CSS, and vanilla JavaScript, rendered with Canvas. The project includes solo mode, online multiplayer with WebSocket, bot matches, advanced scoring, local rankings, visual effects, and pause support.
 
-## Tecnologias
+## Technologies
 
 - HTML5
 - CSS3
-- JavaScript vanilla
+- Vanilla JavaScript
 - Canvas API
-- Node.js para servidor estatico e WebSocket do multiplayer
+- Node.js for the static server and multiplayer WebSocket
 
-Nao ha frameworks externos no jogo principal.
+There are no external frameworks in the main game.
 
-## Como Rodar
+## How to Run
 
-Instale uma versao recente do Node.js e execute:
+Install a recent version of Node.js and run:
 
 ```bash
 npm start
 ```
 
-Depois acesse:
+Then open:
 
 ```text
 http://localhost:8000
 ```
 
-Tambem e possivel abrir `index.html` diretamente no navegador para jogar solo ou contra bot. Para o Multiplayer Online, use o servidor com `npm start`.
+You can also open `index.html` directly in the browser to play solo or against bots. For Online Multiplayer, use the server with `npm start`.
 
-## Estrutura
+## Structure
 
-- `index.html`: tela principal, paineis, placar, menus e canvases.
-- `styles/style.css`: layout, responsividade, botoes, paineis e acabamento visual.
-- `src/app.js`: toda a logica do jogo, renderizacao, modos, pontuacao, bots e efeitos.
-- `server.js`: servidor HTTP local e WebSocket para salas multiplayer.
-- `Pipeline_Prompts.md`: roteiro das fases do projeto.
-- `Agente_Validador.md` e `Agente_Testador.md`: instrucoes para validacao e teste.
+- `index.html`: main screen, panels, scoreboard, menus, and canvases.
+- `styles/style.css`: layout, responsiveness, buttons, panels, and visual polish.
+- `src/app.js`: all game logic, rendering, modes, scoring, bots, and effects.
+- `server.js`: local HTTP server and WebSocket for multiplayer rooms.
+- `Pipeline_Prompts.md`: project phase roadmap.
+- `Agente_Validador.md` and `Agente_Testador.md`: validation and testing instructions.
 
-## Modos de Jogo
+## Game Modes
 
-### Jogador Solo
+### Solo Player
 
-Modo classico de Tetris com um tabuleiro, proxima peca, peca fantasma, pontuacao, niveis, combos, high score e game over.
+Classic Tetris mode with one board, next piece preview, ghost piece, scoring, levels, combos, high score, and game over.
 
-### Multiplayer Online
+### Online Multiplayer
 
-Permite criar ou entrar em uma sala por codigo. A partida comeca quando os dois jogadores estao conectados e prontos. Cada jogador controla seu proprio tabuleiro, e o resultado e definido por sobrevivencia ou pontuacao.
+Allows players to create or join a room by code. The match starts when both players are connected and ready. Each player controls their own board, and the result is decided by survival or score.
 
-### Contra Bot
+### Against Bots
 
-Partida com tres competidores:
+A match with three competitors:
 
-- VOCE
+- YOU
 - PELICANO
 - PELICANA
 
-O jogador escolhe a dificuldade dos bots:
+The player chooses the bot difficulty:
 
-- Facil
-- Medio
-- Dificil / Aura++
+- Easy
+- Medium
+- Hard / Aura++
 
-Os bots analisam seus proprios tabuleiros e executam movimentos automaticamente, incluindo deslocamento, rotacao, soft drop e hard drop.
+The bots analyze their own boards and perform moves automatically, including movement, rotation, soft drop, and hard drop.
 
-## Recursos Implementados
+## Implemented Features
 
-- Campo de jogo 10x20 em Canvas.
-- Sete tetrominos classicos: I, J, L, O, S, T e Z.
-- Movimento lateral, rotacao, soft drop e hard drop.
-- Queda automatica com velocidade progressiva.
-- Deteccao de colisao e travamento de pecas.
-- Limpeza de linhas completas.
-- Proxima peca e peca fantasma.
-- Sistema de pontuacao com linhas, T-Spin, Back-to-Back, Combo, Soft Drop e Hard Drop.
-- High score e ranking salvos em `localStorage`.
-- Bomba de linha ao completar linhas.
-- Particulas, tremor, efeitos de linha, efeitos de travamento e textos flutuantes.
-- Tela inicial, tela de high scores, game over e retorno ao menu.
-- Pausa por botao ou teclado.
-- Layout responsivo para solo, multiplayer e contra bot.
+- 10x20 Canvas playfield.
+- Seven classic tetrominoes: I, J, L, O, S, T, and Z.
+- Lateral movement, rotation, soft drop, and hard drop.
+- Automatic falling with progressive speed.
+- Collision detection and piece locking.
+- Complete line clearing.
+- Next piece preview and ghost piece.
+- Scoring system with lines, T-Spin, Back-to-Back, Combo, Soft Drop, and Hard Drop.
+- High score and ranking saved in `localStorage`.
+- Line bomb when completing lines.
+- Particles, screen shake, line effects, lock effects, and floating text.
+- Start screen, high score screen, game over, and return to menu.
+- Pause by button or keyboard.
+- Responsive layout for solo, multiplayer, and bot modes.
 
-## Controles
+## Controls
 
-- `Seta esquerda`: mover para a esquerda
-- `Seta direita`: mover para a direita
-- `Seta cima`: rotacionar
-- `Seta baixo`: acelerar queda
-- `Espaco`: hard drop
-- `P`: pausar ou retomar
-- `Esc`: voltar ao menu
-- `R`: reiniciar partida
+- `Left Arrow`: move left
+- `Right Arrow`: move right
+- `Up Arrow`: rotate
+- `Down Arrow`: speed up fall
+- `Space`: hard drop
+- `P`: pause or resume
+- `Esc`: return to menu
+- `R`: restart match
 
-## Pontuacao
+## Scoring
 
-A pontuacao considera:
+Scoring considers:
 
-- Linhas removidas
+- Cleared lines
 - T-Spin
 - Back-to-Back
 - Combo
 - Soft drop
 - Hard drop
-- Blocos destruidos pela bomba de linha
+- Blocks destroyed by the line bomb
 
-Valores principais:
+Main values:
 
-- 1 linha: 100 pontos
-- 2 linhas: 300 pontos
-- 3 linhas: 500 pontos
-- 4 linhas: 800 pontos
-- Bloco destruido pela bomba: 25 pontos
+- 1 line: 100 points
+- 2 lines: 300 points
+- 3 lines: 500 points
+- 4 lines: 800 points
+- Block destroyed by bomb: 25 points
 
-Os valores sao multiplicados pelo nivel atual quando aplicavel.
+Values are multiplied by the current level when applicable.
 
 ## Multiplayer
 
-O servidor em `server.js` faz:
+The server in `server.js` handles:
 
-- Servir os arquivos do jogo.
-- Criar salas com codigo.
-- Permitir entrada de um segundo jogador.
-- Controlar estado de pronto dos jogadores.
-- Sincronizar estado e resultado entre os clientes.
+- Serving the game files.
+- Creating rooms with codes.
+- Allowing a second player to join.
+- Managing player ready states.
+- Synchronizing state and results between clients.
 
-Fluxo basico:
+Basic flow:
 
-1. Jogador 1 clica em `Criar Sala`.
-2. Jogador 2 informa o codigo e clica em `Entrar`.
-3. Ambos clicam em `Pronto`.
-4. A partida inicia automaticamente.
+1. Player 1 clicks `Create Room`.
+2. Player 2 enters the code and clicks `Join`.
+3. Both players click `Ready`.
+4. The match starts automatically.
 
-## Persistencia
+## Persistence
 
-O jogo usa `localStorage` para salvar:
+The game uses `localStorage` to save:
 
-- Maior pontuacao
-- Ranking local
-- Dificuldade selecionada para os bots
+- Highest score
+- Local ranking
+- Selected bot difficulty
 
-## Estado do Projeto
+## Project Status
 
-O projeto esta na Fase 7, com refinamentos de interface, efeitos visuais, pausa, retorno ao menu e ajustes nos modos multiplayer e contra bot.
+The project is in Phase 7, with interface refinements, visual effects, pause support, return to menu, and adjustments to multiplayer and bot modes.
