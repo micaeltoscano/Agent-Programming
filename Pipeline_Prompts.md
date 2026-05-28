@@ -20,6 +20,7 @@ NÃO avance para a próxima etapa sem confirmação explícita do agente validad
 
 O agente executor não deve validar o próprio código. A validação deve ser feita por outro agente.
 
+-----
 
 ## Fase 1: Base do Jogo
 
@@ -44,6 +45,7 @@ Ao concluir esta etapa, exiba no console:
 
 "ETAPA 1 CONCLUÍDA — aguardando validação"
 
+-----
 
 ## Fase 2: Níveis e Pontuação
 
@@ -72,6 +74,7 @@ Ao concluir esta etapa, exiba no console:
 
 "ETAPA 2 CONCLUÍDA — aguardando validação"
 
+-----
 
 ## Fase 3: Tela de Abertura e Loop Arcade
 
@@ -111,6 +114,7 @@ Ao concluir esta etapa, exiba no console:
 
 "ETAPA 3 CONCLUÍDA — aguardando validação"
 
+-----
 
 ## Fase 4: Adições Extras, Efeitos Visuais e Bomba de Linha
 
@@ -258,6 +262,7 @@ Ao concluir esta etapa, exiba no console:
 
 "ETAPA 5 CONCLUÍDA — aguardando validação"
 
+-----
 
 ## Fase 6: Modo Contra Bot — Você vs Villacorta 67 vs Villacorta 69
 
@@ -328,6 +333,7 @@ Ao concluir esta etapa, exiba no console:
 
 Não avance para nenhuma nova etapa sem validação explícita do agente validador.
 
+-----
 
 ## Fase 7: Refinamentos Finais e Melhorias de Interface
 
