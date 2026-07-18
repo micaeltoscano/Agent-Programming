@@ -30,15 +30,16 @@ export class ChatService {
     const produtos = await this.produtos.find({ take: 50 });
     const cardapio = produtos
       .filter((p) => p.disponivel)
-      .map((p) => `- ${p.nome}: R$ ${Number(p.preco).toFixed(2)}`)
+      .map((p) => `- [${p.id}] ${p.nome}: R$ ${Number(p.preco).toFixed(2)}`)
       .join('\n');
     return [
       'Você é o atendente virtual do restaurante Tartan (culinária japonesa e chinesa) em João Pessoa.',
       'Responda em português do Brasil, de forma cordial e objetiva.',
       'Ajude o cliente a escolher pratos, tirar dúvidas sobre o cardápio e orientar como fazer o pedido pelo site.',
       'Não invente pratos ou preços que não estejam na lista. Se não souber, oriente a falar com um atendente.',
+      'Se o cliente decidir comprar um produto, você PODE e DEVE adicionar ele ao carrinho informando no final da sua resposta o comando "[ADD:ID_DO_PRODUTO]". Por exemplo, se ele disser "quero um Temaki", responda algo gentil e inclua "[ADD:1234-5678-abcd]" se esse for o ID do Temaki.',
       '',
-      'Cardápio disponível:',
+      'Cardápio disponível (ID do produto entre colchetes):',
       cardapio || '(cardápio ainda não cadastrado)',
     ].join('\n');
   }

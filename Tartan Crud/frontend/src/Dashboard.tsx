@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
-  Bar,
-  BarChart,
+  Area,
+  AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -55,8 +53,15 @@ export function Dashboard() {
     carregar();
   }, []);
 
+  const dataAtual = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
   return (
-    <div className="container">
+    <>
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{ margin: '0 0 8px', fontSize: '28px', color: 'var(--text)' }}>Olá, Admin 👋</h1>
+        <p style={{ margin: 0, color: 'var(--muted)', fontSize: '15px' }}>Painel de Vendas - {dataAtual.charAt(0).toUpperCase() + dataAtual.slice(1)}</p>
+      </div>
+
       <div className="filters">
         <label>
           Início
@@ -67,102 +72,97 @@ export function Dashboard() {
           <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} />
         </label>
         <button className="btn" onClick={carregar}>
-          Aplicar filtro
+          Atualizar Dados
         </button>
       </div>
+      
       {erro && <div className="error">{erro}</div>}
 
       {resumo && (
         <div className="cards">
           <div className="card">
-            <div className="label">Faturamento</div>
-            <div className="value accent">{brl(resumo.faturamento)}</div>
+            <div className="label">Vendas Totais Hoje</div>
+            <div className="value">{brl(resumo.faturamento)}</div>
           </div>
           <div className="card">
-            <div className="label">Ticket médio</div>
-            <div className="value">{brl(resumo.ticketMedio)}</div>
+            <div className="label">Novos Pedidos</div>
+            <div className="value" style={{ color: '#10b981' }}>{resumo.totalPedidos}</div>
           </div>
-          <div className="card">
-            <div className="label">Pedidos</div>
-            <div className="value">{resumo.totalPedidos}</div>
-          </div>
-          <div className="card">
-            <div className="label">Cancelados</div>
-            <div className="value">
-              {resumo.pedidosCancelados}{' '}
-              <span style={{ fontSize: 14, color: 'var(--muted)' }}>
-                ({(resumo.taxaCancelamento * 100).toFixed(1)}%)
-              </span>
+          <div className="card" style={{ padding: '16px' }}>
+            <div className="label" style={{ marginBottom: '8px' }}>Produtos Mais Vendidos</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {vendidos.slice(0, 2).map((v) => (
+                <div key={v.nome} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                  <span style={{ fontWeight: 500 }}>🍣 {v.nome}</span>
+                  <span style={{ color: 'var(--muted)' }}>{brl(v.receita)}</span>
+                </div>
+              ))}
+              {vendidos.length === 0 && <span style={{ color: 'var(--muted)', fontSize: '13px' }}>Sem vendas ainda.</span>}
             </div>
+          </div>
+          <div className="card">
+            <div className="label">Ticket Médio</div>
+            <div className="value" style={{ color: '#0ea5e9' }}>{brl(resumo.ticketMedio)}</div>
           </div>
         </div>
       )}
 
       <div className="panel">
-        <h2>Faturamento diário</h2>
+        <h2>Tendência de Vendas</h2>
         {serie.length === 0 ? (
           <p style={{ color: 'var(--muted)' }}>Sem dados no período.</p>
         ) : (
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={serie}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2c3442" />
-              <XAxis dataKey="dia" stroke="#9aa4b2" fontSize={12} />
-              <YAxis stroke="#9aa4b2" fontSize={12} />
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={serie} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorFaturamento" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0dcd0" />
+              <XAxis dataKey="dia" stroke="#7a776f" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="#7a776f" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
               <Tooltip
-                contentStyle={{ background: '#1a1f27', border: '1px solid #2c3442' }}
+                contentStyle={{ background: '#fff', border: '1px solid #e0dcd0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
                 formatter={(v: number) => brl(v)}
+                labelStyle={{ color: '#7a776f', marginBottom: '4px' }}
               />
-              <Line type="monotone" dataKey="faturamento" stroke="#f0a500" strokeWidth={2} />
-            </LineChart>
+              <Area type="monotone" dataKey="faturamento" stroke="var(--accent)" strokeWidth={3} fillOpacity={1} fill="url(#colorFaturamento)" />
+            </AreaChart>
           </ResponsiveContainer>
         )}
       </div>
 
       <div className="panel">
-        <h2>Produtos mais vendidos</h2>
-        {vendidos.length === 0 ? (
-          <p style={{ color: 'var(--muted)' }}>Sem vendas no período.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={vendidos} layout="vertical" margin={{ left: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2c3442" />
-              <XAxis type="number" stroke="#9aa4b2" fontSize={12} />
-              <YAxis type="category" dataKey="nome" stroke="#9aa4b2" fontSize={12} width={140} />
-              <Tooltip contentStyle={{ background: '#1a1f27', border: '1px solid #2c3442' }} />
-              <Bar dataKey="quantidade" fill="#e23744" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-
-      <div className="panel">
-        <h2>Vendas por bairro (João Pessoa)</h2>
+        <h2>Vendas por Bairro (João Pessoa)</h2>
         <table>
           <thead>
             <tr>
               <th>Bairro</th>
-              <th>Pedidos</th>
-              <th>Faturamento</th>
+              <th>Total de Pedidos</th>
+              <th>Faturamento Total</th>
             </tr>
           </thead>
           <tbody>
             {bairros.map((b) => (
               <tr key={b.bairro}>
-                <td>{b.bairro}</td>
+                <td style={{ fontWeight: 500 }}>{b.bairro}</td>
                 <td>{b.pedidos}</td>
-                <td>{brl(b.faturamento)}</td>
+                <td style={{ color: 'var(--accent)', fontWeight: 500 }}>{brl(b.faturamento)}</td>
               </tr>
             ))}
             {bairros.length === 0 && (
               <tr>
-                <td colSpan={3} style={{ color: 'var(--muted)' }}>
-                  Sem dados no período.
+                <td colSpan={3} style={{ color: 'var(--muted)', textAlign: 'center', padding: '24px' }}>
+                  Sem dados para exibir neste período.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-    </div>
+    </>
   );
 }
+

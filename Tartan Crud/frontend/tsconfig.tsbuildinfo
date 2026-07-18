@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/chat.tsx","./src/dashboard.tsx","./src/login.tsx","./src/api.ts","./src/main.tsx"],"version":"5.9.3"}
+{"root":["./src/admincrud.tsx","./src/app.tsx","./src/catalogo.tsx","./src/chat.tsx","./src/cozinha.tsx","./src/dashboard.tsx","./src/historicopedidos.tsx","./src/login.tsx","./src/motoboy.tsx","./src/api.ts","./src/main.tsx","./src/contexts/authcontext.tsx","./src/contexts/cartcontext.tsx"],"version":"5.9.3"}

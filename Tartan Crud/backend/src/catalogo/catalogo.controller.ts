@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { UserRole } from '../common/enums';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -33,8 +34,11 @@ export class CategoriasController {
 
   // Leitura do cardápio é pública (cliente vê categorias sem login).
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.service.findAll(take ? parseInt(take, 10) : 50, skip ? parseInt(skip, 10) : 0);
   }
 
   @Get(':id')
@@ -69,8 +73,11 @@ export class ProdutosController {
   constructor(private readonly service: ProdutosService) {}
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.service.findAll(take ? parseInt(take, 10) : 50, skip ? parseInt(skip, 10) : 0);
   }
 
   @Get(':id')

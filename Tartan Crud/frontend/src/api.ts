@@ -39,12 +39,22 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, senha }),
     }),
+  register: (nome: string, email: string, senha: string) =>
+    req<Usuario>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ nome, email, senha }),
+    }),
+  me: () => req<Usuario>('/auth/me'),
 
   // Dashboard
   resumo: (q = '') => req<any>(`/dashboard/resumo${q}`),
   maisVendidos: (q = '') => req<any[]>(`/dashboard/mais-vendidos${q}`),
   vendasPorBairro: (q = '') => req<any[]>(`/dashboard/vendas-por-bairro${q}`),
   faturamentoDiario: (q = '') => req<any[]>(`/dashboard/faturamento-diario${q}`),
+
+  // Catálogo
+  categorias: () => req<any[]>('/categorias'),
+  produtos: () => req<any[]>('/produtos'),
 
   // Chat (Ollama)
   chatStatus: () =>
@@ -56,4 +66,24 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ messages }),
     }),
+
+  // Pedidos
+  listarPedidos: () => req<any[]>('/pedidos'),
+  criarPedido: (payload: any) => req<any>('/pedidos', { method: 'POST', body: JSON.stringify(payload) }),
+  atualizarStatusPedido: (id: string, status: string) => req<any>(`/pedidos/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  abandonedCart: (itens: any) => req<any>('/pedidos/abandoned-cart', { method: 'POST', body: JSON.stringify({ itens }) }),
+
+  // CRUD Admin
+  insumos: () => req<any[]>('/estoque'),
+  createCategoria: (payload: any) => req<any>('/categorias', { method: 'POST', body: JSON.stringify(payload) }),
+  updateCategoria: (id: string, payload: any) => req<any>(`/categorias/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteCategoria: (id: string) => req<any>(`/categorias/${id}`, { method: 'DELETE' }),
+
+  createProduto: (payload: any) => req<any>('/produtos', { method: 'POST', body: JSON.stringify(payload) }),
+  updateProduto: (id: string, payload: any) => req<any>(`/produtos/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteProduto: (id: string) => req<any>(`/produtos/${id}`, { method: 'DELETE' }),
+
+  createInsumo: (payload: any) => req<any>('/estoque', { method: 'POST', body: JSON.stringify(payload) }),
+  updateInsumo: (id: string, payload: any) => req<any>(`/estoque/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteInsumo: (id: string) => req<any>(`/estoque/${id}`, { method: 'DELETE' }),
 };

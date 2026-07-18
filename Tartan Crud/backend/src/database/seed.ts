@@ -58,27 +58,66 @@ async function run() {
   }
 
   const categorias = ds.getRepository(Categoria);
-  let cat = await categorias.findOne({ where: { nome: 'Sushi' } });
-  if (!cat) cat = await categorias.save(categorias.create({ nome: 'Sushi' }));
+  const nomesCat = ['Sushi', 'Temaki', 'Yakisoba', 'Bebidas'];
+  const mapCat = new Map<string, Categoria>();
+  
+  for (const nc of nomesCat) {
+    let cat = await categorias.findOne({ where: { nome: nc } });
+    if (!cat) cat = await categorias.save(categorias.create({ nome: nc }));
+    mapCat.set(nc, cat);
+  }
 
   const insumos = ds.getRepository(Insumo);
+  
   let arroz = await insumos.findOne({ where: { nome: 'Arroz' } });
-  if (!arroz)
-    arroz = await insumos.save(
-      insumos.create({ nome: 'Arroz', unidade: 'g', quantidade: '10', estoqueMinimo: '5' }),
-    );
+  if (!arroz) {
+    arroz = insumos.create({ nome: 'Arroz', unidade: 'g', quantidade: '10000', estoqueMinimo: '1000' });
+  } else {
+    arroz.quantidade = '10000'; // Força 10.000 gramas
+  }
+  await insumos.save(arroz);
+
+  let salmao = await insumos.findOne({ where: { nome: 'Salmão' } });
+  if (!salmao) {
+    salmao = insumos.create({ nome: 'Salmão', unidade: 'g', quantidade: '5000', estoqueMinimo: '500' });
+  } else {
+    salmao.quantidade = '5000'; // Força 5.000 gramas
+  }
+  await insumos.save(salmao);
 
   const produtos = ds.getRepository(Produto);
-  if (!(await produtos.findOne({ where: { nome: 'Combo Sushi 10un' } }))) {
-    const pi = ds.getRepository(ProdutoInsumo).create({ insumo: arroz, quantidade: '10' });
-    await produtos.save(
-      produtos.create({
-        nome: 'Combo Sushi 10un',
-        preco: '29.90',
-        categoria: cat,
-        insumos: [pi],
-      }),
-    );
+  const pratos = [
+    { nome: 'Combo Sushi 10un', preco: '29.90', categoria: mapCat.get('Sushi'), imagem: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=400&q=80', insumos: [{ insumo: arroz, quantidade: '10' }, { insumo: salmao, quantidade: '50' }] },
+    { nome: 'Sushi Salmão Trufado', preco: '39.90', categoria: mapCat.get('Sushi'), imagem: 'https://images.unsplash.com/photo-1583623025817-d180a2221d0a?w=400&q=80', insumos: [{ insumo: arroz, quantidade: '15' }, { insumo: salmao, quantidade: '60' }] },
+    { nome: 'Temaki Filadélfia', preco: '22.50', categoria: mapCat.get('Temaki'), imagem: 'https://images.unsplash.com/photo-1553621042-f6e147245754?w=400&q=80', insumos: [{ insumo: arroz, quantidade: '50' }, { insumo: salmao, quantidade: '80' }] },
+    { nome: 'Temaki Skin', preco: '19.90', categoria: mapCat.get('Temaki'), imagem: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=400&q=80', insumos: [{ insumo: arroz, quantidade: '50' }] },
+    { nome: 'Yakisoba Misto', preco: '35.00', categoria: mapCat.get('Yakisoba'), imagem: 'https://images.unsplash.com/photo-1552611052-33e04de081de?w=400&q=80', insumos: [] },
+    { nome: 'Yakisoba de Frutos do Mar', preco: '45.00', categoria: mapCat.get('Yakisoba'), imagem: 'https://images.unsplash.com/photo-1564834724105-918b73d1b9e0?w=400&q=80', insumos: [] },
+    { nome: 'Refrigerante Cola 350ml', preco: '6.00', categoria: mapCat.get('Bebidas'), imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80', insumos: [] },
+    { nome: 'Suco de Laranja Natural', preco: '8.00', categoria: mapCat.get('Bebidas'), imagem: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=400&q=80', insumos: [] },
+  ];
+
+  const piRepo = ds.getRepository(ProdutoInsumo);
+
+  for (const prato of pratos) {
+    const existe = await produtos.findOne({ where: { nome: prato.nome } });
+    if (!existe) {
+      const pInsumos = prato.insumos.map(i => piRepo.create({ insumo: i.insumo, quantidade: i.quantidade }));
+      await produtos.save(
+        produtos.create({
+          nome: prato.nome,
+          preco: prato.preco,
+          categoria: prato.categoria as Categoria,
+          imagem: prato.imagem,
+          insumos: pInsumos,
+        }),
+      );
+    } else {
+      // Atualiza a imagem e a categoria caso já exista
+      existe.imagem = prato.imagem;
+      existe.categoria = prato.categoria as Categoria;
+      await produtos.save(existe);
+    }
   }
 
   const cupons = ds.getRepository(Cupom);

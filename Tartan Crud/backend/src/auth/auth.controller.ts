@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Get } from '@nestjs/common';
 import { UserRole } from '../common/enums';
 import { AuthService } from './auth.service';
 import { CurrentUser, AuthUser } from './current-user.decorator';
@@ -28,5 +28,12 @@ export class AuthController {
   @Roles(UserRole.ADMIN)
   criarUsuario(@Body() dto: RegisterDto, @CurrentUser() _user: AuthUser) {
     return this.auth.register(dto, true);
+  }
+
+  /** Retorna o usuário logado atualmente com base no token JWT. */
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  me(@CurrentUser() user: AuthUser) {
+    return user;
   }
 }

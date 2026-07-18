@@ -22,6 +22,9 @@ export class Produto {
   @Column({ type: 'numeric', precision: 10, scale: 2 })
   preco: string;
 
+  @Column({ type: 'text', nullable: true })
+  imagem?: string;
+
   @Column({ default: true })
   disponivel: boolean;
 

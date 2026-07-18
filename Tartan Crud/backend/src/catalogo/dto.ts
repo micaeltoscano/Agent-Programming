@@ -59,6 +59,10 @@ export class CreateProdutoDto {
   @MaxLength(1000)
   descricao?: string;
 
+  @IsOptional()
+  @IsString()
+  imagem?: string;
+
   // impede preços negativos (Validador Fase 3)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
@@ -89,6 +93,10 @@ export class UpdateProdutoDto {
   @IsString()
   @MaxLength(1000)
   descricao?: string;
+
+  @IsOptional()
+  @IsString()
+  imagem?: string;
 
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })

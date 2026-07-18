@@ -20,14 +20,19 @@ export class ProdutosService {
     private readonly produtoInsumos: Repository<ProdutoInsumo>,
   ) {}
 
-  findAll() {
-    return this.produtos.find({ relations: { insumos: true }, order: { nome: 'ASC' } });
+  findAll(take: number = 50, skip: number = 0) {
+    return this.produtos.find({
+      take,
+      skip,
+      relations: { categoria: true, insumos: { insumo: true } },
+      order: { nome: 'ASC' },
+    });
   }
 
   async findOne(id: string) {
     const p = await this.produtos.findOne({
       where: { id },
-      relations: { insumos: true },
+      relations: { insumos: true, categoria: true },
     });
     if (!p) throw new NotFoundException('Produto não encontrado');
     return p;

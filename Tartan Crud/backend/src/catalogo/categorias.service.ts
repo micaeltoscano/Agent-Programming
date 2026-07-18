@@ -18,8 +18,8 @@ export class CategoriasService {
     private readonly produtos: Repository<Produto>,
   ) {}
 
-  findAll() {
-    return this.categorias.find({ order: { nome: 'ASC' } });
+  findAll(take: number = 50, skip: number = 0) {
+    return this.categorias.find({ take, skip, order: { nome: 'ASC' } });
   }
 
   async findOne(id: string) {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from './api';
+import { useCart } from './contexts/CartContext';
 
 interface Msg {
   role: 'user' | 'assistant' | 'system';
@@ -13,10 +14,6 @@ const SAUDACAO: Msg = {
     'sugestões de pratos e como fazer seu pedido. O que você gostaria hoje?',
 };
 
-/**
- * Chat de atendimento ao cliente — substitui o canal de WhatsApp por um
- * assistente rodando em Ollama local (via proxy do backend em /api/chat).
- */
 export function Chat() {
   const [aberto, setAberto] = useState(false);
   const [online, setOnline] = useState<boolean | null>(null);
@@ -25,6 +22,8 @@ export function Chat() {
   const [texto, setTexto] = useState('');
   const [carregando, setCarregando] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const { addAoCarrinho } = useCart();
+  const [produtosCatalogo, setProdutosCatalogo] = useState<any[]>([]);
 
   useEffect(() => {
     if (!aberto) return;
@@ -35,6 +34,8 @@ export function Chat() {
         setModel(s.model);
       })
       .catch(() => setOnline(false));
+
+    api.produtos().then(setProdutosCatalogo).catch(() => {});
   }, [aberto]);
 
   useEffect(() => {
@@ -49,10 +50,23 @@ export function Chat() {
     setTexto('');
     setCarregando(true);
     try {
-      // Envia só o histórico de conversa (o backend injeta o prompt de sistema).
       const historico = novas.filter((m) => m.role !== 'system');
       const resp = await api.chat(historico);
-      setMensagens([...novas, { role: 'assistant', content: resp.content }]);
+      let answer = resp.content;
+
+      // Extract [ADD:<id>]
+      const addMatch = answer.match(/\[ADD:([a-zA-Z0-9-]+)\]/);
+      if (addMatch) {
+        const id = addMatch[1];
+        const produto = produtosCatalogo.find((p) => p.id === id);
+        if (produto) {
+          addAoCarrinho(produto);
+          answer = answer.replace(addMatch[0], '').trim();
+          answer += `\n\n*(✔️ ${produto.nome} foi adicionado ao seu carrinho!)*`;
+        }
+      }
+
+      setMensagens([...novas, { role: 'assistant', content: answer }]);
       setOnline(true);
     } catch (e: any) {
       setMensagens([

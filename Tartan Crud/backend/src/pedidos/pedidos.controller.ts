@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { AuthUser, CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -28,8 +29,12 @@ export class PedidosController {
   }
 
   @Get()
-  findAll(@CurrentUser() user: AuthUser) {
-    return this.service.findAll(user);
+  findAll(
+    @CurrentUser() user: AuthUser,
+    @Query('take') take?: string,
+    @Query('skip') skip?: string,
+  ) {
+    return this.service.findAll(user, take ? parseInt(take, 10) : 50, skip ? parseInt(skip, 10) : 0);
   }
 
   @Get(':id')
@@ -44,6 +49,15 @@ export class PedidosController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.service.atualizarStatus(id, dto.status, user);
+  }
+
+  @Post('abandoned-cart')
+  @Roles(UserRole.CLIENTE, UserRole.ADMIN, UserRole.FUNCIONARIO)
+  async abandonedCart(@Body() dto: any, @CurrentUser() user: AuthUser) {
+    // Simula a automação de disparo via WhatsApp
+    const consoleLogger = new (require('@nestjs/common').Logger)('WhatsAppAutomation');
+    consoleLogger.log(`[WHATSAPP] Olá ${user.email}! Vimos que você deixou itens no carrinho do Tartan. Volte e finalize com o cupom VOLTE10!`);
+    return { success: true, message: 'Automação de WhatsApp engatilhada.' };
   }
 }
 

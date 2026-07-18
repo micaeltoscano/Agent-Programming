@@ -11,6 +11,6 @@ export function buildDbOptions(config: ConfigService): TypeOrmModuleOptions {
     database: config.get<string>('DB_NAME', 'tartan'),
     autoLoadEntities: true,
     // synchronize apenas fora de produção (protótipo acadêmico).
-    synchronize: config.get<string>('NODE_ENV') !== 'production',
+    synchronize: false,
   };
 }

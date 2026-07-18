@@ -56,6 +56,7 @@ export class AuthService {
       sub: usuario.id,
       email: usuario.email,
       role: usuario.role,
+      nome: usuario.nome,
     });
     return {
       accessToken,

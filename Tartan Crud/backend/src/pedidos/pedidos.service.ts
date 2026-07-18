@@ -24,6 +24,7 @@ import { Pedido } from '../entities/pedido.entity';
 import { Produto } from '../entities/produto.entity';
 import { CupomService } from './cupom.service';
 import { CreatePedidoDto, ItemPedidoDto } from './dto';
+import { EventsGateway } from '../events/events.gateway';
 
 /**
  * Transições legais da máquina de estados. Impede fluxos ilógicos como
@@ -53,6 +54,7 @@ export class PedidosService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly cupomService: CupomService,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
   /**
@@ -80,7 +82,9 @@ export class PedidosService {
 
   async criar(dto: CreatePedidoDto, user: AuthUser): Promise<Pedido> {
     try {
-      return await this.criarTransacional(dto, user);
+      const pedido = await this.criarTransacional(dto, user);
+      this.eventsGateway.emitPedidoCriado(pedido);
+      return pedido;
     } catch (err) {
       this.mapConflito(err);
     }
@@ -130,6 +134,19 @@ export class PedidosService {
       });
       const salvo = await mgr.save(Pedido, pedido);
 
+      // Fase 7: Motor de desconto progressivo.
+      // Se subtotal >= 25.00, gera um cupom promocional para a próxima compra.
+      let cupomGerado: Cupom | undefined;
+      if (subtotal >= 25.00) {
+        const codigoPromocional = `VOLTE-${salvo.id.split('-')[0].toUpperCase()}`;
+        const novoCupom = mgr.create(Cupom, {
+          codigo: codigoPromocional,
+          valorDesconto: '10.00', // Cupom de 10 reais para incentivar o retorno
+          valorMinimoPedido: '30.00',
+        });
+        cupomGerado = await mgr.save(Cupom, novoCupom);
+      }
+
       const pagamento = mgr.create(Pagamento, {
         pedido: salvo,
         metodo: dto.metodoPagamento,
@@ -138,9 +155,12 @@ export class PedidosService {
       });
       await mgr.save(Pagamento, pagamento);
 
-      // Recarrega dentro da MESMA transação (findOne externo não enxergaria
-      // o pedido ainda não commitado sob isolamento SERIALIZABLE).
-      return mgr.findOneOrFail(Pedido, { where: { id: salvo.id } });
+      // Recarrega dentro da MESMA transação
+      const pedidoFinal = await mgr.findOneOrFail(Pedido, { where: { id: salvo.id } });
+      if (cupomGerado) {
+        (pedidoFinal as any).cupomGerado = cupomGerado;
+      }
+      return pedidoFinal;
     });
   }
 
@@ -220,11 +240,11 @@ export class PedidosService {
     }
   }
 
-  async findAll(user: AuthUser): Promise<Pedido[]> {
+  async findAll(user: AuthUser, take: number = 50, skip: number = 0): Promise<Pedido[]> {
     const repo = this.dataSource.getRepository(Pedido);
     // Cliente só vê os próprios pedidos.
     if (user.role === UserRole.CLIENTE) {
-      return repo.find({ where: { cliente: { id: user.id } }, order: { criadoEm: 'DESC' } });
+      return repo.find({ where: { cliente: { id: user.id } }, order: { criadoEm: 'DESC' }, take, skip });
     }
     // Cozinha vê pedidos em fila de produção.
     if (user.role === UserRole.COZINHA) {
@@ -235,6 +255,8 @@ export class PedidosService {
           { status: OrderStatus.PRONTO },
         ],
         order: { criadoEm: 'ASC' },
+        take,
+        skip,
       });
     }
     // Motoboy vê pedidos prontos / em rota.
@@ -242,10 +264,12 @@ export class PedidosService {
       return repo.find({
         where: [{ status: OrderStatus.PRONTO }, { status: OrderStatus.A_CAMINHO }],
         order: { criadoEm: 'ASC' },
+        take,
+        skip,
       });
     }
     // Admin/Funcionário veem tudo.
-    return repo.find({ order: { criadoEm: 'DESC' } });
+    return repo.find({ order: { criadoEm: 'DESC' }, take, skip });
   }
 
   async findOne(id: string, user: AuthUser): Promise<Pedido> {
@@ -295,7 +319,9 @@ export class PedidosService {
 
       pedido.status = novo;
       await mgr.save(Pedido, pedido);
-      return mgr.findOneOrFail(Pedido, { where: { id } });
+      const salvo = await mgr.findOneOrFail(Pedido, { where: { id } });
+      this.eventsGateway.emitStatusAtualizado(salvo);
+      return salvo;
     });
   }
 
