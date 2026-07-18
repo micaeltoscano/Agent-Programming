@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tartan-db
+    environment:
+      POSTGRES_USER: tartan
+      POSTGRES_PASSWORD: tartan
+      POSTGRES_DB: tartan
+    ports:
+      - '5433:5432'
+    volumes:
+      - tartan_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tartan']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: tartan-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: tartan
+      DB_PASSWORD: tartan
+      DB_NAME: tartan
+      JWT_SECRET: change-me-in-production
+      PORT: 3000
+    ports:
+      - '3000:3000'
+
+volumes:
+  tartan_pgdata:
