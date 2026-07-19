@@ -31,6 +31,7 @@ export interface Usuario {
   nome: string;
   email: string;
   role: string;
+  enderecos?: any[];
 }
 
 export const api = {

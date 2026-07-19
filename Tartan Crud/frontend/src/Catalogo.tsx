@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from './api';
 import { useCart, Produto } from './contexts/CartContext';
+import { useAuth } from './contexts/AuthContext';
 
 const brl = (n: number) =>
   n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -9,6 +10,7 @@ const brl = (n: number) =>
 
 export function Catalogo() {
   const { carrinho, addAoCarrinho, limparCarrinho } = useCart();
+  const { usuario } = useAuth();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>('');
@@ -34,6 +36,15 @@ export function Catalogo() {
     }
     load();
   }, []);
+
+  useEffect(() => {
+    if (usuario?.enderecos && usuario.enderecos.length > 0) {
+      const end = usuario.enderecos[0];
+      setLogradouro(end.logradouro || '');
+      setNumero(end.numero || '');
+      setBairro(end.bairro || '');
+    }
+  }, [usuario]);
 
   // addAoCarrinho agora vem do CartContext
 
@@ -183,22 +194,22 @@ export function Catalogo() {
               placeholder="Rua / Logradouro" 
               value={logradouro}
               onChange={(e) => setLogradouro(e.target.value)}
-              style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px' }}
+              style={{ boxSizing: 'border-box', width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px' }}
             />
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
               <input 
                 type="text" 
                 placeholder="Número" 
                 value={numero}
                 onChange={(e) => setNumero(e.target.value)}
-                style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px' }}
+                style={{ boxSizing: 'border-box', flex: 1, minWidth: 0, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px' }}
               />
               <input 
                 type="text" 
                 placeholder="Bairro" 
                 value={bairro}
                 onChange={(e) => setBairro(e.target.value)}
-                style={{ flex: 2, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px' }}
+                style={{ boxSizing: 'border-box', flex: 2, minWidth: 0, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px' }}
               />
             </div>
           </div>
@@ -209,7 +220,7 @@ export function Catalogo() {
               placeholder="Cupom de desconto" 
               value={cupomInput}
               onChange={(e) => setCupomInput(e.target.value)}
-              style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px' }}
+              style={{ boxSizing: 'border-box', flex: 1, minWidth: 0, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px' }}
             />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontWeight: 600, fontSize: '16px' }}>

@@ -58,14 +58,21 @@ export class AuthService {
       role: usuario.role,
       nome: usuario.nome,
     });
+    const userCompleto = await this.getMe(usuario.id);
+
     return {
       accessToken,
-      usuario: {
-        id: usuario.id,
-        nome: usuario.nome,
-        email: usuario.email,
-        role: usuario.role,
-      },
+      usuario: userCompleto,
     };
+  }
+
+  async getMe(userId: string): Promise<Usuario> {
+    const usuario = await this.usuarios.findOne({
+      where: { id: userId },
+      relations: ['enderecos'],
+    });
+    if (!usuario) throw new UnauthorizedException('Usuário não encontrado');
+    delete (usuario as Partial<Usuario>).senhaHash;
+    return usuario;
   }
 }
