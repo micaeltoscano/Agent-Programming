@@ -14,6 +14,9 @@ export function Catalogo() {
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>('');
   const [cupomInput, setCupomInput] = useState('');
   const [hasAlertedCart, setHasAlertedCart] = useState(false);
+  const [logradouro, setLogradouro] = useState('');
+  const [numero, setNumero] = useState('');
+  const [bairro, setBairro] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -54,11 +57,17 @@ export function Catalogo() {
   }, [carrinho, hasAlertedCart]);
 
   async function finalizarPedido() {
+    if (!logradouro || !numero || !bairro) {
+      alert('Por favor, preencha todos os campos do endereço de entrega.');
+      return;
+    }
+
     try {
       const payload = {
         itens: carrinho.map(c => ({ produtoId: c.produto.id, quantidade: c.qtd })),
         metodoPagamento: 'PIX', // Fixo para o MVP
         cupomCodigo: cupomInput || undefined,
+        enderecoNovo: { logradouro, numero, bairro },
       };
       
       const res = await api.criarPedido(payload);
@@ -166,6 +175,34 @@ export function Catalogo() {
         </div>
 
         <div style={{ padding: '20px', background: '#faf9f5', borderTop: '1px solid var(--border)', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
+          
+          <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <h4 style={{ margin: '0 0 4px', fontSize: '14px', color: 'var(--text)' }}>Endereço de Entrega</h4>
+            <input 
+              type="text" 
+              placeholder="Rua / Logradouro" 
+              value={logradouro}
+              onChange={(e) => setLogradouro(e.target.value)}
+              style={{ padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px' }}
+            />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input 
+                type="text" 
+                placeholder="Número" 
+                value={numero}
+                onChange={(e) => setNumero(e.target.value)}
+                style={{ flex: 1, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px' }}
+              />
+              <input 
+                type="text" 
+                placeholder="Bairro" 
+                value={bairro}
+                onChange={(e) => setBairro(e.target.value)}
+                style={{ flex: 2, padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px' }}
+              />
+            </div>
+          </div>
+
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
             <input 
               type="text" 

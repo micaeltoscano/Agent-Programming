@@ -120,6 +120,14 @@ export class PedidosService {
           relations: { usuario: true },
         });
         if (!endereco) throw new NotFoundException('Endereço não encontrado');
+      } else if (dto.enderecoNovo) {
+        const novoEnd = mgr.create(Endereco, {
+          logradouro: dto.enderecoNovo.logradouro,
+          numero: dto.enderecoNovo.numero,
+          bairro: dto.enderecoNovo.bairro,
+          usuario: cliente,
+        });
+        endereco = await mgr.save(Endereco, novoEnd);
       }
 
       const pedido = mgr.create(Pedido, {

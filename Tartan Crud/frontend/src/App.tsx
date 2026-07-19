@@ -59,13 +59,13 @@ export function App() {
           
           {(isAdminOrFunc || isCozinha) && (
             <li className={location.pathname === '/cozinha' ? 'active' : ''} onClick={() => navigate('/cozinha')}>
-              Cozinha (Kanban)
+              Cozinha
             </li>
           )}
 
           {(isAdminOrFunc || isMotoboy) && (
             <li className={location.pathname === '/motoboy' ? 'active' : ''} onClick={() => navigate('/motoboy')}>
-              Motoboy (Entregas)
+              Entregas
             </li>
           )}
 
@@ -74,7 +74,7 @@ export function App() {
           </li>
 
           <li className={location.pathname === '/catalogo' ? 'active' : ''} onClick={() => navigate('/catalogo')}>
-            Catálogo / PDV
+            Catálogo
           </li>
         </ul>
       </aside>

@@ -20,6 +20,17 @@ export class ItemPedidoDto {
   quantidade: number;
 }
 
+export class EnderecoNovoDto {
+  @IsString()
+  logradouro: string;
+
+  @IsString()
+  numero: string;
+
+  @IsString()
+  bairro: string;
+}
+
 export class CreatePedidoDto {
   @IsArray()
   @ArrayNotEmpty() // impede carrinho vazio (Validador Fase 4)
@@ -34,6 +45,11 @@ export class CreatePedidoDto {
   @IsOptional()
   @IsString()
   enderecoEntregaId?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => EnderecoNovoDto)
+  enderecoNovo?: EnderecoNovoDto;
 
   @IsEnum(PaymentMethod)
   metodoPagamento: PaymentMethod;

@@ -22,6 +22,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      ollama-pull:
+        condition: service_completed_successfully
     environment:
       NODE_ENV: development
       DB_HOST: db
@@ -30,9 +32,27 @@ services:
       DB_PASSWORD: tartan
       DB_NAME: tartan
       JWT_SECRET: change-me-in-production
+      OLLAMA_URL: http://ollama:11434
       PORT: 3000
     ports:
       - '3000:3000'
+
+  ollama:
+    image: ollama/ollama
+    container_name: tartan-ollama
+    ports:
+      - '11434:11434'
+    volumes:
+      - ollama_data:/root/.ollama
+
+  ollama-pull:
+    image: curlimages/curl:latest
+    container_name: tartan-ollama-pull
+    depends_on:
+      - ollama
+    command: >
+      -X POST http://ollama:11434/api/pull -d '{"name": "llama3.2"}'
+
 
   frontend:
     image: node:20-alpine
@@ -48,3 +68,4 @@ services:
 
 volumes:
   tartan_pgdata:
+  ollama_data:
