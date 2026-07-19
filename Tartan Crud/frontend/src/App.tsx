@@ -29,8 +29,12 @@ export function App() {
 
   const role = usuario.role;
   const isAdminOrFunc = role === 'ADMIN' || role === 'FUNCIONARIO';
+  const isAdmin = role === 'ADMIN';
   const isCozinha = role === 'COZINHA';
   const isMotoboy = role === 'MOTOBOY';
+  const isCliente = role === 'CLIENTE';
+  const podeVerCatalogo = isCliente || isAdmin;
+  const podeVerPedidos = isCliente || isAdmin;
   
   // Decide the default dashboard path
   let defaultPath = '/catalogo';

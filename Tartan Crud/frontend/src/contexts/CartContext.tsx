@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
-
 export interface Produto {
   id: string;
   nome: string;
@@ -8,23 +7,20 @@ export interface Produto {
   categoria?: { id: string; nome: string };
   imagem?: string;
 }
-
 export interface CartItem {
   produto: Produto;
   qtd: number;
 }
-
 interface CartContextType {
   carrinho: CartItem[];
   addAoCarrinho: (produto: Produto) => void;
+  removerDoCarrinho: (produtoId: string) => void;
+  alterarQtd: (produtoId: string, qtd: number) => void;
   limparCarrinho: () => void;
 }
-
 const CartContext = createContext<CartContextType | undefined>(undefined);
-
 export function CartProvider({ children }: { children: ReactNode }) {
   const [carrinho, setCarrinho] = useState<CartItem[]>([]);
-
   function addAoCarrinho(produto: Produto) {
     setCarrinho(curr => {
       const ex = curr.find(c => c.produto.id === produto.id);
@@ -34,18 +30,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...curr, { produto, qtd: 1 }];
     });
   }
-
+  function removerDoCarrinho(produtoId: string) {
+    setCarrinho(curr => curr.filter(c => c.produto.id !== produtoId));
+  }
+  function alterarQtd(produtoId: string, qtd: number) {
+    if (qtd <= 0) {
+      removerDoCarrinho(produtoId);
+      return;
+    }
+    setCarrinho(curr =>
+      curr.map(c => c.produto.id === produtoId ? { ...c, qtd } : c)
+    );
+  }
   function limparCarrinho() {
     setCarrinho([]);
   }
-
   return (
-    <CartContext.Provider value={{ carrinho, addAoCarrinho, limparCarrinho }}>
+    <CartContext.Provider value={{ carrinho, addAoCarrinho, removerDoCarrinho, alterarQtd, limparCarrinho }}>
       {children}
     </CartContext.Provider>
   );
 }
-
 export function useCart() {
   const context = useContext(CartContext);
   if (context === undefined) {
