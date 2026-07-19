@@ -24,7 +24,7 @@ Interface de Usuário em "Single Page Application", otimizada para rapidez de na
 Um banco relacional forte e robusto. Utilizaremos o TypeORM Migrations para gerenciar as mudanças no ciclo de vida do projeto, saindo do perigoso `synchronize: true` desde cedo.
 
 ### 2.4 Atendente de Inteligência Artificial (Ollama)
-O Tartan contará com um LLM isolado, rodando localmente (Ollama) via proxy do NestJS, servindo como "garçom virtual". Além de tirar dúvidas, esse agente será capaz de orquestrar adições autônomas no carrinho do cliente por meio de comandos ocultos (`[ADD:ID]`).
+O Tartan contará com um LLM isolado, rodando localmente e orquestrado automaticamente via Docker (`docker-compose.yml`), servindo como "garçom virtual". Além de tirar dúvidas, esse agente será capaz de orquestrar adições autônomas no carrinho do cliente por meio de comandos ocultos (`[ADD:ID]`). A imagem do Docker fará o *pull* automático do modelo `llama3.2` sem necessidade de intervenção manual.
 
 ## 3. O Fluxo de Vida do Pedido
 O sistema será pautado numa Máquina de Estados rígida que protegerá os processos do restaurante:

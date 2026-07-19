@@ -30,9 +30,9 @@ Ao codificar, a equipe de desenvolvimento (Agentes) deve seguir estas regras:
 O objetivo deste ciclo é criar o banco de dados, o backend e garantir que um cliente faça login e gere um pedido válido no frontend.
 - [ ] **Setup da Infraestrutura:** Containerização com Docker (`postgres`, `backend`, `frontend`).
 - [ ] **Modelagem do BD (TypeORM):** Criação das Entidades de Usuário (com roles), Endereço, Categoria, Produto, Insumo, Ficha Técnica (Produto_Insumo) e Pedido (com Itens e Pagamento).
-- [ ] **Autenticação (JWT):** Implementar Login e Registro no Back-end (`/auth`) e Context API (`AuthContext`) no Front-end.
+- [ ] **Autenticação (JWT):** Implementar Login e Registro no Back-end (`/auth`) e Context API (`AuthContext`) no Front-end, assegurando que os Endereços do cliente sejam retornados no Payload.
 - [ ] **Regras de Negócio (Estoque):** Back-end deve verificar ficha técnica, conferir estoque de insumos e aplicar `SELECT FOR UPDATE` (Pessimistic Lock) para concorrência ao criar pedidos.
-- [ ] **Catálogo Front-end:** Tela principal onde o cliente visualiza pratos (`/catalogo`) e os insere em um carrinho.
+- [ ] **Catálogo e Checkout:** Tela principal onde o cliente visualiza pratos (`/catalogo`) e os insere em um carrinho, contendo obrigatoriamente um formulário para coleta e autopreenchimento de Endereço (Bairro, Logradouro, Número) para viabilizar entregas.
 
 ### 🧩 Ciclo 02: Resolução de Débitos Técnicos e Telas Departamentais
 O objetivo deste ciclo é organizar a arquitetura front-end que eventualmente tenha crescido de forma desordenada no Ciclo 01, e desenvolver telas dedicadas para os perfis operacionais.
@@ -47,7 +47,7 @@ O objetivo deste ciclo é elevar a maturidade do produto, fornecendo painéis gr
 - [ ] **Infraestrutura Real-Time (WebSockets):** Substituir atualizações baseadas em temporizador (`setInterval`) no Front-end por instâncias de Socket.IO conectadas ao `@nestjs/websockets` (EventGateway). A Cozinha e o Cliente devem ver mudanças de status imediatamente.
 - [ ] **Dashboard Analytics (`recharts`):** Repaginar o painel do Admin, consumindo métricas (Faturamento, Top Produtos, Ticket Médio, Vendas por Bairro) e exibindo em gráficos interativos e bonitos (Barras e Pizza).
 - [ ] **TypeORM Migrations:** Estruturação formal do banco de dados para Deploy em Produção (script de `migration:generate` via CLI).
-- [ ] **Atendente Virtual (Ollama / LLM):** Integrar um chat flutuante no frontend conectado ao back-end. A Inteligência Artificial terá o cardápio no seu System Prompt, responderá dúvidas e **adicionará pratos automaticamente no carrinho do usuário** (parseando comandos mágicos como `[ADD:id-produto]`).
+- [ ] **Atendente Virtual (Ollama / LLM):** Orquestrar o serviço do Ollama nativamente no `docker-compose.yml` (com sidecar para pull automático do modelo). Integrar um chat flutuante no frontend conectado ao back-end. A Inteligência Artificial terá o cardápio no seu System Prompt, responderá dúvidas e **adicionará pratos automaticamente no carrinho do usuário** (parseando comandos mágicos como `[ADD:id-produto]`).
 
 ---
 
